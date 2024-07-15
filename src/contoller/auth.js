@@ -77,6 +77,8 @@ function generateToken() {
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).send({ error: "User not found" });
 
     // Generate and store reset token
     const resetToken = generateToken();
@@ -144,11 +146,12 @@ exports.resetPassword = async (req, res) => {
 
     if (data) {
       const email = data.email;
-      const salt = bcrypt.genSaltSync(parseInt(process.env.SALT));
-      const hashPassword = bcrypt.hashSync(password, salt);
+      console.log(email);
+      const passwordHash = await hashPassword(password);
       const isUpdated = await User.findOneAndUpdate(
         { email: email },
-        { $set: { password: hashPassword } }
+        { $set: { password: passwordHash } },
+        { new: true }
       );
       return res.status(200).send({
         message: "Password updated successfully",
