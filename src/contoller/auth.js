@@ -24,7 +24,7 @@ exports.loginUser = async (req, res) => {
     const user = await User.findOne({ email: email });
     if (!user || !user.password) {
       return res.status(400).send({
-        message:
+        error:
           "The credentials you provided are incorrect, please try again.",
       });
     }
@@ -32,7 +32,7 @@ exports.loginUser = async (req, res) => {
     const match = await comparePassword(password, user.password);
     if (!match)
       return res.status(400).send({
-        message:
+        error:
           "The credentials you provided are incorrect, please try again.",
       });
 
@@ -40,7 +40,7 @@ exports.loginUser = async (req, res) => {
     const role = await Role.findById(user.role);
     if (!role) {
       return res.status(400).send({
-        message: "User role not found.",
+        error: "User role not found.",
       });
     }
 
@@ -66,13 +66,18 @@ exports.loginUser = async (req, res) => {
   }
 };
 
+// function generateToken() {
+//   return Math.random().toString(36).substring(2, 14);
+// }
+
 function generateToken() {
-  return Math.random().toString(36).substring(2, 14);
+  return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
+
     // Generate and store reset token
     const resetToken = generateToken();
     let data = { resetToken: resetToken };
@@ -82,16 +87,47 @@ exports.forgotPassword = async (req, res) => {
       "forgot",
       `Reset Password`
     );
+
     if (isEmailSent) {
-      let expiresAt = new Date(new Date(Date.now() + 15 * 60 * 1000));
-      const expiryTimestamp = expiresAt.getTime();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
       await resetTokenModel.findOneAndUpdate(
         { email },
-        { $set: { resetToken: resetToken, expiresAt: expiryTimestamp } },
+        { $set: { resetToken: resetToken, expiresAt: expiresAt } },
         { upsert: true }
       );
       return res.status(200).send({ message: "Email sent successfully" });
+    } else {
+      return res.status(500).send({ error: "Failed to send email" });
     }
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ error: "Something broke" });
+  }
+};
+
+exports.verifyToken = async (req, res) => {
+  try {
+    const { email, resetToken } = req.body;
+
+    // Find the reset token document
+    const token = await resetTokenModel.findOne({ email, resetToken });
+
+    if (!token) {
+      return res.status(400).send({ error: "Invalid token or email" });
+    }
+
+    const currentTime = new Date().toISOString();
+    if (currentTime > token.expiresAt) {
+      return res.status(400).send({ error: "Token has expired" });
+    }
+
+    // Mark the token as verified
+    await resetTokenModel.updateOne(
+      { email, resetToken },
+      { $set: { tokenVerified: true } }
+    );
+
+    return res.status(200).send({ message: "Token verified successfully" });
   } catch (error) {
     console.log(error);
     return res.status(500).send({ error: "Something broke" });
@@ -104,7 +140,7 @@ exports.resetPassword = async (req, res) => {
     const { token } = req.query;
 
     const data = await resetTokenModel.findOne({ resetToken: token });
-    if (!data) return res.status(400).send({ message: " token not found" });
+    if (!data) return res.status(400).send({ error: " token not found" });
 
     if (data) {
       const email = data.email;
@@ -119,7 +155,7 @@ exports.resetPassword = async (req, res) => {
       });
     } else {
       return res.status(400).send({
-        message: "Token is expired",
+        error: "Token is expired",
       });
     }
   } catch (error) {
@@ -132,19 +168,19 @@ exports.profile = async (req, res) => {
   try {
     const userId = req.user?._id;
     if (!userId) {
-      return res.status(401).send({ message: "Unauthorized access" });
+      return res.status(401).send({ error: "Unauthorized access" });
     }
 
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).send({ message: "User not found" });
+      return res.status(404).send({ error: "User not found" });
     }
 
     let role = null;
     if (ObjectId.isValid(user.role)) {
       role = await Role.findById(user.role);
       if (!role) {
-        return res.status(400).send({ message: "User role not found" });
+        return res.status(400).send({ error: "User role not found" });
       }
     } else if (typeof user.role === 'string') {
       role = { role: user.role };
