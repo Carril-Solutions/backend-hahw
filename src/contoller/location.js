@@ -53,6 +53,27 @@ exports.updateLocation = async (req, res) => {
   }
 };
 
+exports.updateLocationStatus = async (req, res) => {
+  try {
+    const locationId = req.params.locationId;
+    if (!locationId) {
+      return validateId(res);
+    }
+    const user = await Location.findById(locationId);
+    if (!user) {
+      return validateFound(res);
+    }
+    user.status = !user.status;
+    await user.save();
+    return res
+      .status(201)
+      .send({ data: user, message: "Status updated successfully" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ error: "Something broke" });
+  }
+};
+
 exports.getLocation = async (req, res) => {
   try {
     let page = parseInt(req.query.page);

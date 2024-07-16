@@ -55,6 +55,27 @@ exports.updateIssueCode = async (req, res) => {
   }
 };
 
+exports.updateIssueCodeStatus = async (req, res) => {
+  try {
+    const issueCodeId = req.params.issueCodeId;
+    if (!issueCodeId) {
+      return validateId(res);
+    }
+    const user = await issueCodeId.findById(issueCodeId);
+    if (!user) {
+      return validateFound(res);
+    }
+    user.status = !user.status;
+    await user.save();
+    return res
+      .status(201)
+      .send({ data: user, message: "Status updated successfully" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ error: "Something broke" });
+  }
+};
+
 exports.getIssueCode = async (req, res) => {
   try {
     let page = parseInt(req.query.page);

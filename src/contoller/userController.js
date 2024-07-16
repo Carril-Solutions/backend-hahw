@@ -77,6 +77,27 @@ exports.updateUser = async (req, res) => {
   }
 };
 
+exports.updateUserStatus = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    if (!userId) {
+      return validateId(res);
+    }
+    const user = await User.findById(userId);
+    if (!user) {
+      return validateFound(res);
+    }
+    user.status = !user.status;
+    await user.save();
+    return res
+      .status(201)
+      .send({ data: user, message: "User status updated successfully" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ error: "Something broke" });
+  }
+};
+
 exports.getUser = async (req, res) => {
   try {
     let page = parseInt(req.query.page) || 1;

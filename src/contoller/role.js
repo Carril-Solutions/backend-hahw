@@ -57,6 +57,27 @@ exports.updateRole = async (req, res) => {
   }
 };
 
+exports.updateRoleStatus = async (req, res) => {
+  try {
+    const roleId = req.params.roleId;
+    if (!roleId) {
+      return validateId(res);
+    }
+    const user = await Role.findById(roleId);
+    if (!user) {
+      return validateFound(res);
+    }
+    user.status = !user.status;
+    await user.save();
+    return res
+      .status(201)
+      .send({ data: user, message: "Status updated successfully" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ error: "Something broke" });
+  }
+};
+
 exports.getRole = async (req, res) => {
   try {
     let page = parseInt(req.query.page);

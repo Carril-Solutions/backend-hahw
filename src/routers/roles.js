@@ -7,6 +7,7 @@ const {verifyJwtToken, verifyOptionalJwtToken} = require("../middlewares/auth");
 router.post("/addRole", verifyJwtToken, ctrl.createRole);
 router.get("/roles", verifyJwtToken, ctrl.getRole);
 router.put("/updateRole/:roleId", verifyJwtToken, ctrl.updateRole);
+router.patch("/updateRoleStatus/:roleId", verifyJwtToken, ctrl.updateRoleStatus);
 router.delete("/deleteRole/:roleId", verifyJwtToken, ctrl.deleteRole);
 
 

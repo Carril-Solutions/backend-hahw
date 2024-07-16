@@ -50,6 +50,27 @@ exports.updateDivision = async (req, res) => {
   }
 };
 
+exports.updateDivisionStatus = async (req, res) => {
+  try {
+    const divisionId = req.params.divisionId;
+    if (!divisionId) {
+      return validateId(res);
+    }
+    const user = await Division.findById(divisionId);
+    if (!user) {
+      return validateFound(res);
+    }
+    user.status = !user.status;
+    await user.save();
+    return res
+      .status(201)
+      .send({ data: user, message: "Status updated successfully" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ error: "Something broke" });
+  }
+};
+
 exports.getDivision = async (req, res) => {
   try {
     let page = parseInt(req.query.page);
