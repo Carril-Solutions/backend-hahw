@@ -61,7 +61,7 @@ exports.updateIssueCodeStatus = async (req, res) => {
     if (!issueCodeId) {
       return validateId(res);
     }
-    const user = await issueCodeId.findById(issueCodeId);
+    const user = await IssueCode.findById(issueCodeId);
     if (!user) {
       return validateFound(res);
     }

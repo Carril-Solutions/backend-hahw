@@ -53,6 +53,27 @@ exports.updateZone = async (req, res) => {
   }
 };
 
+exports.updateZoneStatus = async (req, res) => {
+  try {
+    const zoneId = req.params.zoneId;
+    if (!zoneId) {
+      return validateId(res);
+    }
+    const user = await Zone.findById(zoneId);
+    if (!user) {
+      return validateFound(res);
+    }
+    user.status = !user.status;
+    await user.save();
+    return res
+      .status(201)
+      .send({ data: user, message: "Status updated successfully" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ error: "Something broke" });
+  }
+};
+
 exports.getZone = async (req, res) => {
   try {
     let page = parseInt(req.query.page);
