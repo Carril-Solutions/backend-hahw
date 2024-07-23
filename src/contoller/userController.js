@@ -5,12 +5,46 @@ const Zone = require("../model/zone");
 const Location = require("../model/location");
 const { createJwtToken } = require("../middlewares/auth");
 const { comparePassword, hashPassword } = require("../utils/password");
+const Admin = require("../model/admin");
 const {
   validateFields,
   validateFound,
   validateId,
   alreadyFound,
 } = require("../validatores/commonValidations");
+
+exports.createAdmin = async (req, res) => {
+  try {
+    const { name, email, password, phone, role, status } = req.body;
+    if (!name || !email || !password || !phone || !role) {
+      return validateFields(res);
+    }
+    const userFound = await Admin.findOne({ email });
+    if (userFound) {
+      return alreadyFound(res);
+    }
+    const admin = await User.findOne({ email });
+    if (admin) {
+      return alreadyFound(res);
+    }
+    const passwordHash = await hashPassword(password);
+    const data = {
+      name,
+      email,
+      password: passwordHash,
+      phone,
+      role,
+      status,
+    };
+    const users = await Admin.create(data);
+    return res
+      .status(201)
+      .send({ data: users, message: "Admin created successfully" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send({ error: "Something broke" });
+  }
+};
 
 exports.createUser = async (req, res) => {
   try {

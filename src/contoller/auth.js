@@ -15,13 +15,74 @@ const {
   alreadyFound,
 } = require("../validatores/commonValidations");
 const { Types: { ObjectId } } = require('mongoose');
+const Admin = require("../model/admin");
+
+// exports.loginUser = async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
+//     if (!email || !password) return validateFields(res);
+
+//     const user = await User.findOne({ email: email });
+//     if (!user || !user.password) {
+//       return res.status(400).send({
+//         error:
+//           "The credentials you provided are incorrect, please try again.",
+//       });
+//     }
+
+//     const match = await comparePassword(password, user.password);
+//     if (!match)
+//       return res.status(400).send({
+//         error:
+//           "The credentials you provided are incorrect, please try again.",
+//       });
+
+//     // Fetch role details using role ID
+//     const role = await Role.findById(user.role);
+//     if (!role) {
+//       return res.status(400).send({
+//         error: "User role not found.",
+//       });
+//     }
+
+//     const payload = {
+//       _id: user._id,
+//       name: user.name,
+//       email: user.email,
+//       phone: user.phone,
+//       role: role.role,
+//     };
+
+//     const token = createJwtToken(payload);
+//     if (token) {
+//       payload["token"] = token;
+//     }
+
+//     return res
+//       .status(200)
+//       .send({ data: payload, message: "Successfully logged in" });
+//   } catch (error) {
+//     console.log(error);
+//     return res.status(500).send({ error: "Something broke" });
+//   }
+// };
 
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) return validateFields(res);
 
-    const user = await User.findOne({ email: email });
+    // Try to find the user in the User collection
+    let user = await User.findOne({ email: email });
+    let isAdmin = false;
+    let role = null;
+
+    if (!user) {
+      // If user is not found in the User collection, try the Admin collection
+      user = await Admin.findOne({ email: email });
+      isAdmin = true;
+    }
+
     if (!user || !user.password) {
       return res.status(400).send({
         error:
@@ -36,12 +97,18 @@ exports.loginUser = async (req, res) => {
           "The credentials you provided are incorrect, please try again.",
       });
 
-    // Fetch role details using role ID
-    const role = await Role.findById(user.role);
-    if (!role) {
-      return res.status(400).send({
-        error: "User role not found.",
-      });
+    if (isAdmin) {
+      // If the user is from the Admin collection, the role is a string
+      role = user.role;
+    } else {
+      // If the user is from the User collection, the role is an ObjectId
+      role = await Role.findById(user.role);
+      if (!role) {
+        return res.status(400).send({
+          error: "User role not found.",
+        });
+      }
+      role = role.role;
     }
 
     const payload = {
@@ -49,7 +116,8 @@ exports.loginUser = async (req, res) => {
       name: user.name,
       email: user.email,
       phone: user.phone,
-      role: role.role,
+      role: role,
+      isAdmin: isAdmin,
     };
 
     const token = createJwtToken(payload);
@@ -167,6 +235,52 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
+// exports.profile = async (req, res) => {
+//   try {
+//     const userId = req.user?._id;
+//     if (!userId) {
+//       return res.status(401).send({ error: "Unauthorized access" });
+//     }
+
+//     const user = await User.findById(userId);
+//     if (!user) {
+//       return res.status(404).send({ error: "User not found" });
+//     }
+
+//     let role = null;
+//     if (ObjectId.isValid(user.role)) {
+//       role = await Role.findById(user.role);
+//       if (!role) {
+//         return res.status(400).send({ error: "User role not found" });
+//       }
+//     } else if (typeof user.role === 'string') {
+//       role = { role: user.role };
+//     }
+
+//     let divisionName = null;
+//     if (ObjectId.isValid(user.division)) {
+//       const division = await Division.findById(user.division);
+//       if (division) {
+//         divisionName = division.divisionName;
+//       }
+//     }
+
+//     const userProfile = {
+//       _id: user._id,
+//       name: user.name,
+//       email: user.email,
+//       phone: user.phone,
+//       role: role.role,
+//       division: divisionName,
+//     };
+
+//     return res.status(200).send({ data: userProfile });
+//   } catch (error) {
+//     console.log(error);
+//     return res.status(500).send({ error: "Something broke" });
+//   }
+// };
+
 exports.profile = async (req, res) => {
   try {
     const userId = req.user?._id;
@@ -174,23 +288,36 @@ exports.profile = async (req, res) => {
       return res.status(401).send({ error: "Unauthorized access" });
     }
 
-    const user = await User.findById(userId);
+    let user = await User.findById(userId);
+    let isAdmin = false;
+
+    if (!user) {
+      user = await Admin.findById(userId);
+      isAdmin = true;
+    }
+
     if (!user) {
       return res.status(404).send({ error: "User not found" });
     }
 
     let role = null;
-    if (ObjectId.isValid(user.role)) {
-      role = await Role.findById(user.role);
-      if (!role) {
-        return res.status(400).send({ error: "User role not found" });
-      }
-    } else if (typeof user.role === 'string') {
+    if (isAdmin) {
+      // If user is from Admin collection, role is a string
       role = { role: user.role };
+    } else {
+      // If user is from User collection, role is an ObjectId
+      if (ObjectId.isValid(user.role)) {
+        role = await Role.findById(user.role);
+        if (!role) {
+          return res.status(400).send({ error: "User role not found" });
+        }
+      } else if (typeof user.role === 'string') {
+        role = { role: user.role };
+      }
     }
 
     let divisionName = null;
-    if (ObjectId.isValid(user.division)) {
+    if (!isAdmin && ObjectId.isValid(user.division)) {
       const division = await Division.findById(user.division);
       if (division) {
         divisionName = division.divisionName;

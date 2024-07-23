@@ -6,6 +6,7 @@ const ctrl = require("../contoller/userController");
 const {verifyJwtToken, verifyOptionalJwtToken} = require("../middlewares/auth");
 
 router.post("/create", verifyOptionalJwtToken, ctrl.createUser);
+router.post("/admin", ctrl.createAdmin);
 router.get("/users", verifyJwtToken, ctrl.getUser);
 router.get("/user/:userId", verifyJwtToken, ctrl.getUserDetails);
 router.put("/update/:userId", verifyJwtToken, ctrl.updateUser);
