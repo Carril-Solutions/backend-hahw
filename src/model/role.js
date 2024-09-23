@@ -20,6 +20,22 @@ const roleSchema = new Schema({
         type : Boolean,
         default : false
     },
+    isAccounting : {
+        type : Boolean,
+        default : false
+    },
+    isResearch : {
+        type : Boolean,
+        default : false
+    },
+    isMarketing : {
+        type : Boolean,
+        default : false
+    },
+    isProduction : {
+        type : Boolean,
+        default : false
+    }
 }, {timestamps : true})
 
 const Role = mongoose.model("role", roleSchema)
