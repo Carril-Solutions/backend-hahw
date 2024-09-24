@@ -11,7 +11,7 @@ const userSchema = new Schema({
     },
     password : {
         type : String,
-        required : true
+        required : false
     },
     phone : {
         type : String,
@@ -30,7 +30,14 @@ const userSchema = new Schema({
     status : {
         type : Boolean,
         default : true
-    }
+    },
+    zone : {
+        type : mongoose.Schema.Types.ObjectId,
+    },
+    device : {
+        type : mongoose.Schema.Types.Array,
+        ref: 'Device'
+    },
 },
 {timestamps : true}
 ); 

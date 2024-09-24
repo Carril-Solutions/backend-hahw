@@ -12,6 +12,7 @@ const {
   validateId,
   alreadyFound,
 } = require("../validatores/commonValidations");
+const mongoose = require("mongoose");
 
 exports.createAdmin = async (req, res) => {
   try {
@@ -52,25 +53,33 @@ exports.createUser = async (req, res) => {
     if (req.user) {
       user = req.user._id;
     }
-    const { name, email, password, phone, role, division, status } = req.body;
-    if (!name || !email || !password || !phone) {
+    const { name, email, phone, role, division, status, zone, device } = req.body;
+    if (!name || !email || !phone) {
       return validateFields(res);
     }
     const userFound = await User.findOne({ email });
     if (userFound) {
       return alreadyFound(res);
     }
-    const passwordHash = await hashPassword(password);
+
+    const deviceIds = device.map(id => new mongoose.Types.ObjectId(id));
+  
     const data = {
       name,
       email,
-      password: passwordHash,
       phone,
       role,
       division,
       status,
       adminId: user,
+      zone,
+      device: deviceIds
     };
+
+    if (!Array.isArray(data.device)) {
+      return res.status(400).send({ error: "Device must be an array of IDs." });
+    }
+
     const users = await User.create(data);
     return res
       .status(201)
@@ -265,8 +274,8 @@ exports.deleteUser = async (req, res) => {
 
 exports.getSelectedRoles = async (req, res) => {
   try {
-    const roles = await Role.find({status : true})
-    .select("_id role");
+    const roles = await Role.find({ status: true })
+      .select("_id role");
     return res
       .status(200)
       .send({ data: roles, message: "Roles fetched successfully" });
@@ -278,8 +287,8 @@ exports.getSelectedRoles = async (req, res) => {
 
 exports.getSelectedDivisions = async (req, res) => {
   try {
-    const roles = await Division.find({status : true})
-    .select("_id divisionName");
+    const roles = await Division.find({ status: true })
+      .select("_id divisionName");
     return res
       .status(200)
       .send({ data: roles, message: "Division fetched successfully" });
@@ -291,8 +300,8 @@ exports.getSelectedDivisions = async (req, res) => {
 
 exports.getSelectedLocations = async (req, res) => {
   try {
-    const roles = await Location.find({status : true})
-    .select("_id locationName");
+    const roles = await Location.find({ status: true })
+      .select("_id locationName");
     return res
       .status(200)
       .send({ data: roles, message: "Locations fetched successfully" });
@@ -304,8 +313,8 @@ exports.getSelectedLocations = async (req, res) => {
 
 exports.getSelectedZones = async (req, res) => {
   try {
-    const roles = await Zone.find({status : true})
-    .select("_id zoneName");
+    const roles = await Zone.find({ status: true })
+      .select("_id zoneName");
     return res
       .status(200)
       .send({ data: roles, message: "Zones fetched successfully" });
