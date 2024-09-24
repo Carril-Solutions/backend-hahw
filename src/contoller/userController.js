@@ -54,7 +54,7 @@ exports.createUser = async (req, res) => {
       user = req.user._id;
     }
     const { name, email, phone, role, division, status, zone, device } = req.body;
-    if (!name || !email || !phone) {
+    if (!name || !email || !phone || !role) {
       return validateFields(res);
     }
     const userFound = await User.findOne({ email });
@@ -209,6 +209,11 @@ exports.getUser = async (req, res) => {
         path: "division",
         model: "division",
         select: "_id divisionName",
+      })
+      .populate({
+        path: "device",
+        model: "device",
+        select: "_id deviceName",
       })
       .sort(sortOrder)
       .skip(startIndex)
