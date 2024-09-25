@@ -1,5 +1,17 @@
 const {default : mongoose, Schema} = require("mongoose");
 
+const notifiedUserSchema = new Schema({
+    userName: {
+        type: String,
+    },
+    contactNumber: {
+        type: String,
+    },
+    email: {
+        type: String,
+    }
+});
+
 const deviceSchema = new Schema({
     deviceName : {
         type : String,
@@ -50,15 +62,7 @@ const deviceSchema = new Schema({
     warningDifferentialTemprature : {   
         type : String,
     },
-    warningUserName : {
-        type : String,
-    },
-    warningUserContactNumber : {
-        type : String,
-    },
-    warningUserEmail : {
-        type : String,
-    },
+    notifiedUsers: [notifiedUserSchema],
     adminId : {
         type : mongoose.Schema.Types.ObjectId
     },

@@ -26,9 +26,7 @@ exports.createDevice = async (req, res) => {
       warningHotTemprature,
       warningWarmTemprature,
       warningDifferentialTemprature,
-      warningUserName,
-      warningUserContactNumber,
-      warningUserEmail,
+      notifiedUsers
     } = req.body;
 
     if (!deviceName || !sensorNumber || !maintainance) {
@@ -51,9 +49,7 @@ exports.createDevice = async (req, res) => {
       warningHotTemprature,
       warningWarmTemprature,
       warningDifferentialTemprature,
-      warningUserName,
-      warningUserContactNumber,
-      warningUserEmail,
+      notifiedUsers, 
       adminId: admin,
     };
 
@@ -92,9 +88,7 @@ exports.updateDevice = async (req, res) => {
       warningHotTemprature,
       warningWarmTemprature,
       warningDifferentialTemprature,
-      warningUserName,
-      warningUserContactNumber,
-      warningUserEmail,
+      notifiedUsers,
     } = req.body;
 
     if (deviceName) device.deviceName = deviceName;
@@ -112,9 +106,10 @@ exports.updateDevice = async (req, res) => {
     if (warningHotTemprature) device.warningHotTemprature = warningHotTemprature;
     if (warningWarmTemprature) device.warningWarmTemprature = warningWarmTemprature;
     if (warningDifferentialTemprature) device.warningDifferentialTemprature = warningDifferentialTemprature;
-    if (warningUserName) device.warningUserName = warningUserName;
-    if (warningUserContactNumber) device.warningUserContactNumber = warningUserContactNumber;
-    if (warningUserEmail) device.warningUserEmail = warningUserEmail;
+
+    if (notifiedUsers !== undefined) {
+      device.notifiedUsers = notifiedUsers;
+    }
 
     if (admin) device.adminId = admin;
 
@@ -125,6 +120,7 @@ exports.updateDevice = async (req, res) => {
     return res.status(500).send({ error: "Something broke" });
   }
 };
+
 
 exports.updateDeviceStatus = async (req, res) => {
   try {
