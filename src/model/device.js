@@ -16,7 +16,7 @@ const deviceSchema = new Schema({
     location : {
         type : mongoose.Schema.Types.ObjectId
     },
-    divison : {
+    division : {
         type : mongoose.Schema.Types.ObjectId
     },
     zone : {

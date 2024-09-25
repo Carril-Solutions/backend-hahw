@@ -1,9 +1,10 @@
 const Device = require("../model/device");
+const Division = require("../model/division");
+
 const {
   validateFields,
   validateFound,
   validateId,
-  alreadyFound,
 } = require("../validatores/commonValidations");
 
 exports.createDevice = async (req, res) => {
@@ -30,8 +31,8 @@ exports.createDevice = async (req, res) => {
       warningUserEmail,
     } = req.body;
 
-    if (!deviceName || !sensorNumber || !maintainance ) {
-      return res.status(400).send({ error: "All required fields must be provided." });
+    if (!deviceName || !sensorNumber || !maintainance) {
+      return validateFields(res);
     }
 
     const data = {
@@ -72,7 +73,7 @@ exports.updateDevice = async (req, res) => {
 
     const device = await Device.findById(deviceId);
     if (!device) {
-      return res.status(404).send({ error: "Device not found." });
+      return validateFound(res);
     }
 
     const {
@@ -99,9 +100,9 @@ exports.updateDevice = async (req, res) => {
     if (deviceName) device.deviceName = deviceName;
     if (sensorNumber) device.sensorNumber = sensorNumber;
     if (maintainance !== undefined) device.maintainance = maintainance;
-    if (location) device.location = location; 
+    if (location) device.location = location;
     if (division) device.division = division;
-    if (zone) device.zone = zone; 
+    if (zone) device.zone = zone;
     if (status !== undefined) device.status = status;
     if (deployUserName) device.deployUserName = deployUserName;
     if (deployUserContactNumber) device.deployUserContactNumber = deployUserContactNumber;
@@ -129,12 +130,12 @@ exports.updateDeviceStatus = async (req, res) => {
   try {
     const deviceId = req.params.deviceId;
     if (!deviceId) {
-      return res.status(400).send({ error: "Device ID is required." });
+      return validateId(res);
     }
 
     const device = await Device.findById(deviceId);
     if (!device) {
-      return res.status(404).send({ error: "Device not found." });
+      return validateFound(res);
     }
 
     device.status = !device.status;
@@ -159,22 +160,6 @@ exports.getDevice = async (req, res) => {
 
     const result = {};
 
-    const totalCount = await Device.countDocuments().exec();
-    
-    if (endIndex < totalCount) {
-      result.next = {
-        page: page + 1,
-        limit: limit,
-      };
-    }
-
-    if (startIndex > 0) {
-      result.previous = {
-        page: page - 1,
-        limit: limit,
-      };
-    }
-
     const order = req.query.order || "";
     const sort = req.query.sort || "";
 
@@ -191,31 +176,52 @@ exports.getDevice = async (req, res) => {
 
     let searchQuery = search
       ? {
-          $or: [
-            { deviceName: { $regex: new RegExp(search), $options: "si" } },
-            { sensorNumber: { $regex: new RegExp(search), $options: "si" } }, 
-            { deployUserName: { $regex: new RegExp(search), $options: "si" } }, 
-            { warningUserName: { $regex: new RegExp(search), $options: "si" } }, 
-          ],
-        }
+        $or: [
+          { deviceName: { $regex: new RegExp(search), $options: "si" } },
+          { sensorNumber: { $regex: new RegExp(search), $options: "si" } },
+          { deployUserName: { $regex: new RegExp(search), $options: "si" } },
+          { warningUserName: { $regex: new RegExp(search), $options: "si" } },
+        ],
+      }
       : {};
-    
-      if (divisionNameFilter) {
-        const divisions = await Division.find({
-          divisionName: { $regex: new RegExp(divisionNameFilter, "si") },
-        }).select("_id");
-        const divisionIds = divisions.map((division) => division._id);
-        searchQuery.division = { $in: divisionIds };
-      }
-  
-      if (statusFilter !== undefined) {
-        searchQuery.status = statusFilter === 'true';
-      }
+
+    if (divisionNameFilter) {
+      const divisions = await Division.find({
+        divisionName: { $regex: new RegExp(divisionNameFilter, "si") },
+      }).select("_id");
+      const divisionIds = divisions.map((division) => division._id);
+      searchQuery.division = { $in: divisionIds };
+    }
+
+    if (statusFilter !== undefined) {
+      searchQuery.status = statusFilter === 'true';
+    }
 
     const devices = await Device.find(searchQuery)
+      .populate({
+        path: "division",
+        model: "division",
+        select: "_id divisionName",
+      })
       .sort(sortOrder)
       .skip(startIndex)
       .limit(limit);
+
+    const totalCount = devices.length;
+
+    if (endIndex < totalCount) {
+      result.next = {
+        page: page + 1,
+        limit: limit,
+      };
+    }
+
+    if (startIndex > 0) {
+      result.previous = {
+        page: page - 1,
+        limit: limit,
+      };
+    }
 
     return res.status(200).send({
       message: "Devices fetched successfully",
@@ -233,14 +239,15 @@ exports.getDevice = async (req, res) => {
 exports.deleteDevice = async (req, res) => {
   try {
     const deviceId = req.params.deviceId;
-
+    
     if (!deviceId) {
-      return res.status(400).send({ error: "Device ID is required." });
+      return validateId(res);
     }
-
+    
     const device = await Device.findByIdAndDelete(deviceId);
+
     if (!device) {
-      return res.status(404).send({ error: "Device not found." });
+      return validateFound(res);
     }
 
     return res.status(200).send({ data: device, message: "Device deleted successfully" });
