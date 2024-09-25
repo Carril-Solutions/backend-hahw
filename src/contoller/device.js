@@ -29,8 +29,28 @@ exports.createDevice = async (req, res) => {
       notifiedUsers
     } = req.body;
 
-    if (!deviceName || !sensorNumber || !maintainance) {
-      return validateFields(res);
+    const missingFields = [];
+
+    if (!deviceName) missingFields.push("deviceName");
+    if (!sensorNumber) missingFields.push("sensorNumber");
+    if (!maintainance) missingFields.push("maintainance");
+    if (!location) missingFields.push("location");
+    if (!division) missingFields.push("division");
+    if (!zone) missingFields.push("zone");
+    if (!deployUserName) missingFields.push("deployUserName");
+    if (!deployUserContactNumber) missingFields.push("deployUserContactNumber");
+    if (!deployUserEmailAddress) missingFields.push("deployUserEmailAddress");
+    if (!deployDate) missingFields.push("deployDate");
+    if (!deployTime) missingFields.push("deployTime");
+    if (!warningHotTemprature) missingFields.push("warningHotTemprature");
+    if (!warningWarmTemprature) missingFields.push("warningWarmTemprature");
+    if (!warningDifferentialTemprature) missingFields.push("warningDifferentialTemprature");
+    if (!notifiedUsers) missingFields.push("notifiedUsers");
+
+    if (missingFields.length > 0) {
+      return res.status(400).send({
+        error: `${missingFields.join(", ")}: fields are required.`
+      });
     }
 
     const data = {
@@ -49,17 +69,26 @@ exports.createDevice = async (req, res) => {
       warningHotTemprature,
       warningWarmTemprature,
       warningDifferentialTemprature,
-      notifiedUsers, 
+      notifiedUsers,
       adminId: admin,
     };
 
     const device = await Device.create(data);
     return res.status(201).send({ data: device, message: "Device created successfully" });
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).send({
+        error: Object.keys(error.errors).map(field =>
+          `${field}: ${error.errors[field].message}`
+        ).join(", ")
+      });
+    }
     console.error(error);
     return res.status(500).send({ error: "Something broke" });
   }
 };
+
+
 
 
 exports.updateDevice = async (req, res) => {
@@ -116,6 +145,13 @@ exports.updateDevice = async (req, res) => {
     await device.save();
     return res.status(200).send({ data: device, message: "Device updated successfully" });
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).send({
+        error: Object.keys(error.errors).map(field =>
+          `${field}: ${error.errors[field].message}`
+        ).join(", ")
+      });
+    }
     console.error(error);
     return res.status(500).send({ error: "Something broke" });
   }
@@ -235,11 +271,11 @@ exports.getDevice = async (req, res) => {
 exports.deleteDevice = async (req, res) => {
   try {
     const deviceId = req.params.deviceId;
-    
+
     if (!deviceId) {
       return validateId(res);
     }
-    
+
     const device = await Device.findByIdAndDelete(deviceId);
 
     if (!device) {

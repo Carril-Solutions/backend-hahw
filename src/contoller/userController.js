@@ -41,7 +41,13 @@ exports.createAdmin = async (req, res) => {
     return res
       .status(201)
       .send({ data: users, message: "Admin created successfully" });
-  } catch (error) {
+  } catch (error) {if (error.name === 'ValidationError') {
+    return res.status(400).send({
+      error: Object.keys(error.errors).map(field =>
+        `${field}: ${error.errors[field].message}`
+      ).join(", ")
+    });
+  }
     console.log(error);
     return res.status(500).send({ error: "Something broke" });
   }
@@ -85,6 +91,13 @@ exports.createUser = async (req, res) => {
       .status(201)
       .send({ data: users, message: "User created successfully" });
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).send({
+        error: Object.keys(error.errors).map(field =>
+          `${field}: ${error.errors[field].message}`
+        ).join(", ")
+      });
+    }
     console.log(error);
     return res.status(500).send({ error: "Something broke" });
   }
@@ -115,6 +128,13 @@ exports.updateUser = async (req, res) => {
       .status(201)
       .send({ data: user, message: "User updated successfully" });
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).send({
+        error: Object.keys(error.errors).map(field =>
+          `${field}: ${error.errors[field].message}`
+        ).join(", ")
+      });
+    }
     console.log(error);
     return res.status(500).send({ error: "Something broke" });
   }

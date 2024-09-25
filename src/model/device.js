@@ -1,72 +1,113 @@
-const {default : mongoose, Schema} = require("mongoose");
+const { default: mongoose, Schema } = require("mongoose");
 
 const notifiedUserSchema = new Schema({
     userName: {
         type: String,
+        required: true
     },
     contactNumber: {
         type: String,
+        required: true,
+        validate: {
+            validator: function (v) {
+                return /^\d{10}$/.test(v);
+            },
+            message: props => `${props.value} must be a 10-digit number!`
+        }
     },
     email: {
         type: String,
+        required: true,
+        validate: {
+            validator: function (v) {
+                return /\S+@\S+\.\S+/.test(v);
+            },
+            message: props => `${props.value} is not a valid email!`
+        }
     }
 });
 
 const deviceSchema = new Schema({
-    deviceName : {
-        type : String,
-        required : true
+    deviceName: {
+        type: String,
+        required: true
     },
-    sensorNumber : {
-        type : String,
-        required : true
+    sensorNumber: {
+        type: String,
+        required: true
     },
-    maintainance : {
-        type : Number,
-        required : true
+    maintainance: {
+        type: Number,
+        required: true
     },
-    location : {
-        type : mongoose.Schema.Types.ObjectId
+    location: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true
     },
-    division : {
-        type : mongoose.Schema.Types.ObjectId
+    division: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true
     },
-    zone : {
-        type : mongoose.Schema.Types.ObjectId
+    zone: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true
     },
-    status : {
-        type : Boolean,
-        default : true
+    status: {
+        type: Boolean,
+        default: true
     },
-    deployUserName : {
-        type : String,
+    deployUserName: {
+        type: String,
+        required: true
     },
-    deployUserContactNumber : {
-        type : String,
+    deployUserContactNumber: {
+        type: String,
+        required: true,
+        validate: {
+            validator: function (v) {
+                return /^\d{10}$/.test(v);
+            },
+            message: props => `${props.value} must be a 10-digit number!`
+        }
     },
-    deployUserEmailAddress : {
-        type : String,
+    deployUserEmailAddress: {
+        type: String,
+        required: true,
+        validate: {
+            validator: function (v) {
+                return /\S+@\S+\.\S+/.test(v);
+            },
+            message: props => `${props.value} is not a valid email!`
+        }
     },
-    deployDate : {
-        type : String,
+    deployDate: {
+        type: String,
+        required: true
     },
-    deployTime : {
-        type : String,
+    deployTime: {
+        type: String,
+        required: true
     },
-    warningHotTemprature : {   
-        type : String,
+    warningHotTemprature: {
+        type: String,
+        required: true
     },
-    warningWarmTemprature : {   
-        type : String,
+    warningWarmTemprature: {
+        type: String,
+        required: true
     },
-    warningDifferentialTemprature : {   
-        type : String,
+    warningDifferentialTemprature: {
+        type: String,
+        required: true
     },
-    notifiedUsers: [notifiedUserSchema],
-    adminId : {
-        type : mongoose.Schema.Types.ObjectId
+    notifiedUsers: {
+        type: [notifiedUserSchema]
     },
-}, {timestamps : true})
+    adminId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true
+    },
+}, { timestamps: true });
 
-const Device = mongoose.model("device", deviceSchema)
-module.exports = Device
+const Device = mongoose.model("device", deviceSchema);
+module.exports = Device;

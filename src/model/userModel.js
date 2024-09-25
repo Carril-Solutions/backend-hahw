@@ -7,7 +7,13 @@ const userSchema = new Schema({
     },
     email : {
         type : String,
-        required : true
+        required : true,
+        validate: {
+            validator: function (v) {
+                return /\S+@\S+\.\S+/.test(v);
+            },
+            message: props => `${props.value} is not a valid email!`
+        }
     },
     password : {
         type : String,
@@ -15,7 +21,13 @@ const userSchema = new Schema({
     },
     phone : {
         type : String,
-        required : true
+        required : true,
+        validate: {
+            validator: function (v) {
+                return /^\d{10}$/.test(v);
+            },
+            message: props => `${props.value} must be a 10-digit number!`
+        }
     },
     role : {
         type : mongoose.Schema.Types.ObjectId,
