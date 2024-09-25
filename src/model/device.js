@@ -70,16 +70,6 @@ const deviceSchema = new Schema({
             message: props => `${props.value} must be a 10-digit number!`
         }
     },
-    deployUserEmailAddress: {
-        type: String,
-        required: true,
-        validate: {
-            validator: function (v) {
-                return /\S+@\S+\.\S+/.test(v);
-            },
-            message: props => `${props.value} is not a valid email!`
-        }
-    },
     deployDate: {
         type: String,
         required: true

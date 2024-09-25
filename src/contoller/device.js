@@ -20,7 +20,6 @@ exports.createDevice = async (req, res) => {
       status,
       deployUserName,
       deployUserContactNumber,
-      deployUserEmailAddress,
       deployDate,
       deployTime,
       warningHotTemprature,
@@ -39,7 +38,6 @@ exports.createDevice = async (req, res) => {
     if (!zone) missingFields.push("zone");
     if (!deployUserName) missingFields.push("deployUserName");
     if (!deployUserContactNumber) missingFields.push("deployUserContactNumber");
-    if (!deployUserEmailAddress) missingFields.push("deployUserEmailAddress");
     if (!deployDate) missingFields.push("deployDate");
     if (!deployTime) missingFields.push("deployTime");
     if (!warningHotTemprature) missingFields.push("warningHotTemprature");
@@ -63,7 +61,6 @@ exports.createDevice = async (req, res) => {
       status,
       deployUserName,
       deployUserContactNumber,
-      deployUserEmailAddress,
       deployDate,
       deployTime,
       warningHotTemprature,
@@ -111,7 +108,6 @@ exports.updateDevice = async (req, res) => {
       status,
       deployUserName,
       deployUserContactNumber,
-      deployUserEmailAddress,
       deployDate,
       deployTime,
       warningHotTemprature,
@@ -129,7 +125,6 @@ exports.updateDevice = async (req, res) => {
     if (status !== undefined) device.status = status;
     if (deployUserName) device.deployUserName = deployUserName;
     if (deployUserContactNumber) device.deployUserContactNumber = deployUserContactNumber;
-    if (deployUserEmailAddress) device.deployUserEmailAddress = deployUserEmailAddress;
     if (deployDate) device.deployDate = deployDate;
     if (deployTime) device.deployTime = deployTime;
     if (warningHotTemprature) device.warningHotTemprature = warningHotTemprature;

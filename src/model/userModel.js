@@ -48,7 +48,6 @@ const userSchema = new Schema({
     },
     device : {
         type : mongoose.Schema.Types.Array,
-        ref: 'Device'
     },
 },
 {timestamps : true}

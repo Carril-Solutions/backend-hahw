@@ -17,9 +17,7 @@ exports.createDynamicModelandAddedData = async (req, res) => {
             const dynamicSchema = new mongoose.Schema({}, { strict: false });
             DynamicModel = mongoose.model(modelName, dynamicSchema);
         }
-
         const newDocument = new DynamicModel(data);
-
         await newDocument.save();
 
         return res.status(201).send({ message: "Device data has been added successfully", data: newDocument });
