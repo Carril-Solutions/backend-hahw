@@ -18,8 +18,8 @@ const userSchema = new Schema({
         required : true
     },
     role : {
-        //type : mongoose.Schema.Types.ObjectId,
-        type: Schema.Types.Mixed,
+        type : mongoose.Schema.Types.ObjectId,
+        // type: Schema.Types.Mixed,
     },
     division : {
         type : mongoose.Schema.Types.ObjectId,

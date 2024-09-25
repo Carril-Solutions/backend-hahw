@@ -11,42 +11,48 @@ exports.createDevice = async (req, res) => {
     const admin = req.user?._id;
     const {
       deviceName,
-      deviceCode,
       sensorNumber,
-      type,
+      maintainance,
       location,
       division,
       zone,
-      region,
-      maintainanceDate,
       status,
-      maintainanceUser,
-      contactNumber,
-      emailAddress,
-      warningTemprature,
-      warningEmail,
+      deployUserName,
+      deployUserContactNumber,
+      deployUserEmailAddress,
+      deployDate,
+      deployTime,
+      warningHotTemprature,
+      warningWarmTemprature,
+      warningDifferentialTemprature,
+      warningUserName,
+      warningUserContactNumber,
+      warningUserEmail,
     } = req.body;
 
-    if (!deviceName || !deviceCode || !sensorNumber || !type || !region) {
+    if (!deviceName || !sensorNumber || !maintainance ) {
       return res.status(400).send({ error: "All required fields must be provided." });
     }
 
     const data = {
       deviceName,
-      deviceCode,
       sensorNumber,
-      type,
+      maintainance,
       location,
       division,
       zone,
-      region,
-      maintainanceDate,
       status,
-      maintainanceUser,
-      contactNumber,
-      emailAddress,
-      warningTemprature,
-      warningEmail,
+      deployUserName,
+      deployUserContactNumber,
+      deployUserEmailAddress,
+      deployDate,
+      deployTime,
+      warningHotTemprature,
+      warningWarmTemprature,
+      warningDifferentialTemprature,
+      warningUserName,
+      warningUserContactNumber,
+      warningUserEmail,
       adminId: admin,
     };
 
@@ -58,11 +64,12 @@ exports.createDevice = async (req, res) => {
   }
 };
 
+
 exports.updateDevice = async (req, res) => {
   try {
     const admin = req.user?._id;
     const deviceId = req.params.deviceId;
-    
+
     const device = await Device.findById(deviceId);
     if (!device) {
       return res.status(404).send({ error: "Device not found." });
@@ -70,37 +77,43 @@ exports.updateDevice = async (req, res) => {
 
     const {
       deviceName,
-      deviceCode,
       sensorNumber,
-      type,
+      maintainance,
       location,
       division,
       zone,
-      region,
-      maintainanceDate,
       status,
-      maintainanceUser,
-      contactNumber,
-      emailAddress,
-      warningTemprature,
-      warningEmail,
+      deployUserName,
+      deployUserContactNumber,
+      deployUserEmailAddress,
+      deployDate,
+      deployTime,
+      warningHotTemprature,
+      warningWarmTemprature,
+      warningDifferentialTemprature,
+      warningUserName,
+      warningUserContactNumber,
+      warningUserEmail,
     } = req.body;
 
     if (deviceName) device.deviceName = deviceName;
-    if (deviceCode) device.deviceCode = deviceCode;
     if (sensorNumber) device.sensorNumber = sensorNumber;
-    if (type) device.type = type;
+    if (maintainance !== undefined) device.maintainance = maintainance;
     if (location) device.location = location; 
     if (division) device.division = division;
     if (zone) device.zone = zone; 
-    if (region) device.region = region;
-    if (maintainanceDate) device.maintainanceDate = maintainanceDate;
     if (status !== undefined) device.status = status;
-    if (maintainanceUser) device.maintainanceUser = maintainanceUser;
-    if (contactNumber) device.contactNumber = contactNumber;
-    if (emailAddress) device.emailAddress = emailAddress;
-    if (warningTemprature) device.warningTemprature = warningTemprature;
-    if (warningEmail) device.warningEmail = warningEmail;
+    if (deployUserName) device.deployUserName = deployUserName;
+    if (deployUserContactNumber) device.deployUserContactNumber = deployUserContactNumber;
+    if (deployUserEmailAddress) device.deployUserEmailAddress = deployUserEmailAddress;
+    if (deployDate) device.deployDate = deployDate;
+    if (deployTime) device.deployTime = deployTime;
+    if (warningHotTemprature) device.warningHotTemprature = warningHotTemprature;
+    if (warningWarmTemprature) device.warningWarmTemprature = warningWarmTemprature;
+    if (warningDifferentialTemprature) device.warningDifferentialTemprature = warningDifferentialTemprature;
+    if (warningUserName) device.warningUserName = warningUserName;
+    if (warningUserContactNumber) device.warningUserContactNumber = warningUserContactNumber;
+    if (warningUserEmail) device.warningUserEmail = warningUserEmail;
 
     if (admin) device.adminId = admin;
 
@@ -134,16 +147,21 @@ exports.updateDeviceStatus = async (req, res) => {
   }
 };
 
+
 exports.getDevice = async (req, res) => {
   try {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
+    const divisionNameFilter = req.query.division || "";
+    const statusFilter = req.query.status;
     let startIndex = (page - 1) * limit;
     let endIndex = page * limit;
 
     const result = {};
 
-    if (endIndex < (await Device.countDocuments().exec())) {
+    const totalCount = await Device.countDocuments().exec();
+    
+    if (endIndex < totalCount) {
       result.next = {
         page: page + 1,
         limit: limit,
@@ -175,40 +193,59 @@ exports.getDevice = async (req, res) => {
       ? {
           $or: [
             { deviceName: { $regex: new RegExp(search), $options: "si" } },
-            { deviceCode: { $regex: new RegExp(search), $options: "si" } },
-            { region: { $regex: new RegExp(search), $options: "si" } },
+            { sensorNumber: { $regex: new RegExp(search), $options: "si" } }, 
+            { deployUserName: { $regex: new RegExp(search), $options: "si" } }, 
+            { warningUserName: { $regex: new RegExp(search), $options: "si" } }, 
           ],
         }
       : {};
+    
+      if (divisionNameFilter) {
+        const divisions = await Division.find({
+          divisionName: { $regex: new RegExp(divisionNameFilter, "si") },
+        }).select("_id");
+        const divisionIds = divisions.map((division) => division._id);
+        searchQuery.division = { $in: divisionIds };
+      }
+  
+      if (statusFilter !== undefined) {
+        searchQuery.status = statusFilter === 'true';
+      }
 
     const devices = await Device.find(searchQuery)
       .sort(sortOrder)
       .skip(startIndex)
       .limit(limit);
-    const count = await Device.countDocuments();
 
     return res.status(200).send({
       message: "Devices fetched successfully",
       data: devices,
-      totalCounts: count,
+      totalCounts: totalCount,
       pagination: result,
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     return res.status(500).send({ error: "Something broke" });
   }
 };
 
+
 exports.deleteDevice = async (req, res) => {
   try {
     const deviceId = req.params.deviceId;
+
+    if (!deviceId) {
+      return res.status(400).send({ error: "Device ID is required." });
+    }
+
     const device = await Device.findByIdAndDelete(deviceId);
     if (!device) {
       return res.status(404).send({ error: "Device not found." });
     }
+
     return res.status(200).send({ data: device, message: "Device deleted successfully" });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     return res.status(500).send({ error: "Something broke" });
   }
 };

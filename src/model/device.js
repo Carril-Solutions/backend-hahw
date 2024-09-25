@@ -5,16 +5,12 @@ const deviceSchema = new Schema({
         type : String,
         required : true
     },
-    deviceCode : {
-        type : String,
-        required : true
-    },
     sensorNumber : {
         type : String,
         required : true
     },
-    type : {
-        type : String,
+    maintainance : {
+        type : Number,
         required : true
     },
     location : {
@@ -26,30 +22,41 @@ const deviceSchema = new Schema({
     zone : {
         type : mongoose.Schema.Types.ObjectId
     },
-    region : {
-        type : String,
-        required : true
-    },
-    maintainanceDate : {
-        type : String,
-    },
     status : {
         type : Boolean,
         default : true
     },
-    maintainanceUser : {
+    deployUserName : {
         type : String,
     },
-    contactNumber : {
+    deployUserContactNumber : {
         type : String,
     },
-    emailAddress : {
+    deployUserEmailAddress : {
         type : String,
     },
-    warningTemprature : {   
+    deployDate : {
         type : String,
     },
-    warningEmail : {
+    deployTime : {
+        type : String,
+    },
+    warningHotTemprature : {   
+        type : String,
+    },
+    warningWarmTemprature : {   
+        type : String,
+    },
+    warningDifferentialTemprature : {   
+        type : String,
+    },
+    warningUserName : {
+        type : String,
+    },
+    warningUserContactNumber : {
+        type : String,
+    },
+    warningUserEmail : {
         type : String,
     },
     adminId : {

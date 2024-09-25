@@ -167,6 +167,9 @@ exports.getUser = async (req, res) => {
     const order = req.query.order || "";
     const sort = req.query.sort || "";
     const search = req.query.search || "";
+    const divisionNameFilter = req.query.division || "";
+    const roleFilter = req.query.role || "";
+    const statusFilter = req.query.status;
 
     let sortOrder = {};
     if (order === "ascending") {
@@ -178,6 +181,7 @@ exports.getUser = async (req, res) => {
     }
 
     let searchQuery = {};
+
     if (search) {
       const roles = await Role.find({
         role: { $regex: new RegExp(search, "si") },
@@ -191,15 +195,37 @@ exports.getUser = async (req, res) => {
 
       searchQuery = {
         $or: [
-          { name: { $regex: new RegExp(search), $options: "si" } },
-          { email: { $regex: new RegExp(search), $options: "si" } },
+          { name: { $regex: new RegExp(search, "si") } },
+          { email: { $regex: new RegExp(search, "si") } },
           { role: { $in: roleIds } },
           { division: { $in: divisionIds } },
         ],
       };
     }
 
-    const users = await User.find(searchQuery)
+    if (divisionNameFilter) {
+      const divisions = await Division.find({
+        divisionName: { $regex: new RegExp(divisionNameFilter, "si") },
+      }).select("_id");
+      const divisionIds = divisions.map((division) => division._id);
+      searchQuery.division = { $in: divisionIds };
+    }
+
+    if (statusFilter !== undefined) {
+      searchQuery.status = statusFilter === 'true';
+    }
+
+    if (roleFilter) {
+      const roles = await Role.find({
+        role: roleFilter,
+      }).select("_id");
+      const roleIds = roles.map((role) => role._id);
+      if (roleIds.length > 0) {
+        searchQuery.role = { $in: roleIds };
+      }
+    }
+
+    let users = await User.find(searchQuery)
       .populate({
         path: "role",
         model: "role",
@@ -219,18 +245,20 @@ exports.getUser = async (req, res) => {
       .skip(startIndex)
       .limit(limit);
 
-    const count = await User.countDocuments(searchQuery);
+    const count = users.length;
 
     return res.status(200).send({
       message: "Users Fetched Successfully",
       data: users,
       totalCount: count,
+      pagination: result,
     });
   } catch (error) {
     console.log(error);
     return res.status(500).send({ error: "Something broke" });
   }
 };
+
 
 exports.getUserDetails = async (req, res) => {
   try {
