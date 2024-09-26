@@ -3,6 +3,6 @@ const router = express.Router();
 
 const ctrl = require("../contoller/dynamic");
 
-router.post("/addDynamicIotData", ctrl.createDynamicModelandAddedData);
+router.post("/iot-data", ctrl.createDynamicModelandAddedData);
 
 module.exports = router
