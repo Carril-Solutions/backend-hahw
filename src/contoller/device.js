@@ -230,6 +230,16 @@ exports.getDevice = async (req, res) => {
         model: "division",
         select: "_id divisionName",
       })
+      .populate({
+        path: "zone",
+        model: "zone",
+        select: "_id zoneName",
+      })
+      .populate({
+        path: "location",
+        model: "location",
+        select: "_id locationName",
+      })
       .sort(sortOrder)
       .skip(startIndex)
       .limit(limit);
