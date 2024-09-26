@@ -128,7 +128,7 @@ exports.updateUser = async (req, res) => {
     if (device) {
       user.device = device.map(id => new mongoose.Types.ObjectId(id));
     }
-    
+
     await user.save();
     return res
       .status(201)
@@ -237,7 +237,7 @@ exports.getUser = async (req, res) => {
       searchQuery.division = { $in: divisionIds };
     }
 
-    if (statusFilter !== undefined) {
+    if (statusFilter !== undefined && statusFilter !== "") {
       searchQuery.status = statusFilter === 'true';
     }
 

@@ -5,6 +5,7 @@ const {
   validateId,
   alreadyFound,
 } = require("../validatores/commonValidations");
+const mongoose = require("mongoose");
 
 exports.createRole = async (req, res) => {
   try {
@@ -117,14 +118,19 @@ exports.getRole = async (req, res) => {
 
     let searchQuery = search
       ? {
-          $or: [
-            {
-              role: { $regex: new RegExp(search), $options: "si" },
-            },
-          ],
-        }
+        $or: [
+          {
+            role: { $regex: new RegExp(search), $options: "si" },
+          },
+        ],
+      }
       : {};
     const roles = await Role.find(searchQuery)
+      .populate({
+        path: "permission",
+        model: "permission",
+        select: "_id permissionName",
+      })
       .sort(sortOrder)
       .skip(startIndex)
       .limit(limit);
@@ -171,11 +177,12 @@ exports.allowPermission = async (req, res) => {
     if (!roles) {
       return validateFound(res);
     }
-    const dataToUpdate = req.body;
+    const dataToUpdate = req.body.permissions;
+    const permissionIds = dataToUpdate.map(id => new mongoose.Types.ObjectId(id));
 
     const updateRole = await Role.findOneAndUpdate(
       { _id: roleId },
-      { $set: { ...dataToUpdate } },
+      { $set: { permission: permissionIds } },
       { new: true }
     );
     if (updateRole) {
@@ -186,7 +193,7 @@ exports.allowPermission = async (req, res) => {
     } else {
       return res
         .status(400)
-        .send({message: "Failed to update permissions" });
+        .send({ message: "Failed to update permissions" });
     }
   } catch (error) {
     console.log(error);
