@@ -114,7 +114,8 @@ exports.updateUser = async (req, res) => {
     if (!user) {
       return validateFound(res);
     }
-    const { name, email, password, phone, role, division, status } = req.body;
+    const { name, email, password, phone, role, division, status, zone, device } = req.body;
+    
     if (name) user.name = name;
     if (email) user.email = email;
     if (password) user.password = password;
@@ -123,6 +124,11 @@ exports.updateUser = async (req, res) => {
     if (division) user.division = division;
     if (status !== undefined) user.status = status;
     if (admin) user.adminId = admin;
+    if (zone) user.zone = zone;
+    if (device) {
+      user.device = device.map(id => new mongoose.Types.ObjectId(id));
+    }
+    
     await user.save();
     return res
       .status(201)
