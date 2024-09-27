@@ -169,6 +169,9 @@ exports.updateUserStatus = async (req, res) => {
 
 exports.getUser = async (req, res) => {
   try {
+    if (req.user.role !== "admin") {
+      return res.status(403).send({ error: "Unauthorized to view users details." });
+    }
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
     let startIndex = (page - 1) * limit;

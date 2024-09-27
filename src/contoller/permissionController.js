@@ -1,4 +1,6 @@
 const Permission = require("../model/permissionModel");
+const AuditLog = require("../model//auditModel");
+
 const {
   validateFound,
   validateId,
@@ -6,6 +8,9 @@ const {
 
 exports.createPermission = async (req, res) => {
   try {
+    if (req.user.role !== "admin") {
+      return res.status(403).send({ error: "Unauthorized to create permission." });
+    }
     const admin = req.user?._id;
     const { permissionName, description } = req.body;
 
@@ -26,6 +31,15 @@ exports.createPermission = async (req, res) => {
     };
 
     const permission = await Permission.create(data);
+
+    const auditEntry = new AuditLog({
+      permissionId: permission._id,
+      adminId: admin,
+      action: 'create',
+      newState: permission
+    });
+    await auditEntry.save();
+
     return res.status(201).send({ data: permission, message: "Permission created successfully" });
   } catch (error) {
     if (error.name === 'ValidationError') {
@@ -42,8 +56,13 @@ exports.createPermission = async (req, res) => {
 
 exports.updatePermission = async (req, res) => {
   try {
+    if (req.user.role !== "admin") {
+      return res.status(403).send({ error: "Unauthorized to update permission." });
+    }
     const permissionId = req.params.permissionId;
     const permission = await Permission.findById(permissionId);
+    const previousPermission = await Permission.findById(permissionId);
+
     if (!permission) {
       return validateFound(res);
     }
@@ -53,7 +72,17 @@ exports.updatePermission = async (req, res) => {
     if (permissionName) permission.permissionName = permissionName;
     if (description) permission.description = description;
 
-    await permission.save();
+    const updatePermission = await permission.save();
+
+    const auditEntry = new AuditLog({
+      permissionId: permissionId,
+      adminId: permission.adminId,
+      action: 'update',
+      previousState: previousPermission,
+      newState: updatePermission
+    });
+    await auditEntry.save();
+
     return res.status(200).send({ data: permission, message: "Permission updated successfully" });
   } catch (error) {
     if (error.name === 'ValidationError') {
@@ -70,8 +99,11 @@ exports.updatePermission = async (req, res) => {
 
 exports.getPermission = async (req, res) => {
   try {
+    if (req.user.role !== "admin") {
+      return res.status(403).send({ error: "Unauthorized to view permissions." });
+    }
     const permissions = await Permission.find()
-      .populate({ path: "adminId", select: "_id name" }) 
+      .populate({ path: "adminId", select: "_id name" })
       .sort({ createdAt: -1 });
 
     return res.status(200).send({ message: "Permissions fetched successfully", data: permissions });
@@ -83,6 +115,9 @@ exports.getPermission = async (req, res) => {
 
 exports.deletePermission = async (req, res) => {
   try {
+    if (req.user.role !== "admin") {
+      return res.status(403).send({ error: "Unauthorized to delete permission." });
+    }
     const permissionId = req.params.permissionId;
 
     if (!permissionId) {
@@ -93,6 +128,14 @@ exports.deletePermission = async (req, res) => {
     if (!permission) {
       return validateFound(res);
     }
+
+    const auditEntry = new AuditLog({
+      permissionId: permissionId,
+      adminId: permission.adminId,
+      action: 'delete',
+      previousState: permission
+    });
+    await auditEntry.save();
 
     return res.status(200).send({ data: permission, message: "Permission deleted successfully" });
   } catch (error) {
