@@ -200,17 +200,19 @@ exports.getDevice = async (req, res) => {
     }
 
     const search = req.query.search || "";
+    
+    let searchQuery = {};
 
-    let searchQuery = search
-      ? {
+    if (search) {
+      searchQuery = {
         $or: [
           { deviceName: { $regex: new RegExp(search), $options: "si" } },
           { sensorNumber: { $regex: new RegExp(search), $options: "si" } },
           { deployUserName: { $regex: new RegExp(search), $options: "si" } },
           { warningUserName: { $regex: new RegExp(search), $options: "si" } },
         ],
-      }
-      : {};
+      };
+    }
 
     if (divisionNameFilter) {
       const divisions = await Division.find({
@@ -220,7 +222,7 @@ exports.getDevice = async (req, res) => {
       searchQuery.division = { $in: divisionIds };
     }
 
-    if (statusFilter !== undefined) {
+    if (statusFilter !== undefined && statusFilter !== "") {
       searchQuery.status = statusFilter === 'true';
     }
 
@@ -244,7 +246,7 @@ exports.getDevice = async (req, res) => {
       .skip(startIndex)
       .limit(limit);
 
-    const totalCount = devices.length;
+    const totalCount = await Device.countDocuments(searchQuery);
 
     if (endIndex < totalCount) {
       result.next = {
