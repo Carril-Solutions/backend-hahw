@@ -17,7 +17,6 @@ const mailTransporter = nodemailer.createTransport({
 
 const sendEmail = async (email, data,emailTemplate) => {
   try {
-    console.log("Sending Email !");
 
     const template = fs.readFileSync(__dirname + `/email/${emailTemplate}.ejs`, 'utf-8')
 
@@ -38,7 +37,6 @@ const sendEmail = async (email, data,emailTemplate) => {
           console.error("Error Occurs", err);
           return { status: 0, err: err };
         } else {
-          console.log("Email sent successfully to - ", email);
           resolve(true);
           return { status: true };
         }
@@ -48,7 +46,6 @@ const sendEmail = async (email, data,emailTemplate) => {
     return response;
   } catch (e) {
     // error(e);
-    console.log(e);
     return e;
   }
 };
