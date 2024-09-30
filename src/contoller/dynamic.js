@@ -14,7 +14,7 @@ exports.createDynamicModelandAddedData = async (req, res) => {
         if (mongoose.models[modelName]) {
             DynamicModel = mongoose.models[modelName];
         } else {
-            const dynamicSchema = new mongoose.Schema({}, { strict: false });
+            const dynamicSchema = new mongoose.Schema({}, { strict: false, timestamps: true });
             DynamicModel = mongoose.model(modelName, dynamicSchema);
         }
         let savedDocuments;
