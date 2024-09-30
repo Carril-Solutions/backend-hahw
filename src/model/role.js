@@ -22,7 +22,6 @@ const roleSchema = new Schema({
     },
     permission: [{ 
         type: mongoose.Schema.Types.ObjectId, 
-        ref: 'Permission' 
     }],
     // isAccounting : {
     //     type : Boolean,
