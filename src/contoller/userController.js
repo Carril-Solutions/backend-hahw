@@ -146,6 +146,47 @@ exports.updateUser = async (req, res) => {
   }
 };
 
+exports.updateUserRole = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).send({ error: "Unauthorized to view users details." });
+    }
+    
+    const userId = req.params.userId;
+    if (!userId) {
+      return validateId(res);
+    }
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return validateFound(res);
+    }
+    
+    const { role } = req.body;
+    
+    if (role !== undefined) {
+      user.role = role;
+    } else {
+      return res.status(400).send({ error: "Role is required" });
+    }
+
+    await user.save();
+    return res
+      .status(200)
+      .send({ data: user, message: "User role updated successfully" });
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).send({
+        error: Object.keys(error.errors).map(field =>
+          `${field}: ${error.errors[field].message}`
+        ).join(", ")
+      });
+    }
+    console.log(error);
+    return res.status(500).send({ error: "Something broke" });
+  }
+};
+
 exports.updateUserStatus = async (req, res) => {
   try {
     const userId = req.params.userId;

@@ -11,6 +11,7 @@ router.get("/users", verifyJwtToken, ctrl.getUser);
 router.get("/user/:userId", verifyJwtToken, ctrl.getUserDetails);
 router.put("/update/:userId", verifyJwtToken, ctrl.updateUser);
 router.patch("/updateStatus/:userId", verifyJwtToken, ctrl.updateUserStatus);
+router.patch("/updateUserRole/:userId", verifyJwtToken, ctrl.updateUserRole);
 router.delete("/delete/:userId", verifyJwtToken, ctrl.deleteUser);
 
 
