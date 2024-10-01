@@ -1,5 +1,5 @@
 const validateFields = (res) => {
-    return res.status(400).send({ error: " Mendatory Fields are required" });
+    return res.status(400).send({ error: "Mandatory fields are required" });
 };
 const validateFound = (res) => {
     return res.status(400).send({ error: "not found" });
