@@ -149,40 +149,38 @@ exports.updateUser = async (req, res) => {
 exports.updateUserRole = async (req, res) => {
   try {
     if (req.user.role !== "admin") {
-      return res.status(403).send({ error: "Unauthorized to view users details." });
+      return res.status(403).send({ error: "Unauthorized to update user roles." });
     }
     
-    const userId = req.params.userId;
-    if (!userId) {
-      return validateId(res);
-    }
-    
-    const user = await User.findById(userId);
-    if (!user) {
-      return validateFound(res);
-    }
-    
-    const { role } = req.body;
-    
-    if (role !== undefined) {
-      user.role = role;
-    } else {
-      return res.status(400).send({ error: "Role is required" });
+    const userData = req.body.userData;
+
+    if (!Array.isArray(userData) || userData.length === 0) {
+      return res.status(400).send({ error: "Invalid payload. Must be an array of user role data." });
     }
 
-    await user.save();
-    return res
-      .status(200)
-      .send({ data: user, message: "User role updated successfully" });
+    const updatePromises = userData.map(async (update) => {
+      const { userId, role } = update;
+      if (!userId || !role) {
+        throw new Error("Both userId and role are required.");
+      }
+      
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new Error(`User with ID ${userId} not found.`);
+      }
+
+      user.role = role;
+      return user.save();
+    });
+
+    await Promise.all(updatePromises);
+    
+    return res.status(200).send({ message: "User roles updated successfully." });
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      return res.status(400).send({
-        error: Object.keys(error.errors).map(field =>
-          `${field}: ${error.errors[field].message}`
-        ).join(", ")
-      });
+    if (error.message.includes("not found")) {
+      return res.status(404).send({ error: error.message });
     }
-    console.log(error);
+    console.error(error);
     return res.status(500).send({ error: "Something broke" });
   }
 };
