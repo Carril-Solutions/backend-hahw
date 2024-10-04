@@ -27,22 +27,7 @@ mongoose
   .catch((err) => console.log("Error from Database", err));
 
 // applying Middleware
-const allowedOrigins = [
-  'https://dev-env.carril.io',
-  'http://localhost:5173',
-];
-
-app.use(cors({
-  origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-          callback(null, origin);
-      } else {
-          callback(new Error('Not allowed by CORS'));
-      }
-  },
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+app.use(cors());
 app.use(express.json({ limit: "1024mb" }));
 app.use(morgan("dev"));
 app.use(cookieParser());
