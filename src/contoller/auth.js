@@ -209,31 +209,48 @@ exports.resetPassword = async (req, res) => {
     const { password } = req.body;
     const { token } = req.query;
 
-    const data = await resetTokenModel.findOne({ resetToken: token });
-    if (!data) return res.status(400).send({ error: " token not found" });
+    if (!token || !password) return validateFields(res);
 
-    if (data) {
-      const email = data.email;
-      console.log(email);
+    const data = await resetTokenModel.findOne({ resetToken: token });
+    if (!data) return res.status(404).send({ error: "Data not found." });
+
+    const email = data.email;
+
+    const adminData = await Admin.findOne({ email });
+    if (adminData) {
+      if (await comparePassword(password, adminData.password)) {
+        return res.status(400).send({ error: "New password must be different." });
+      }
       const passwordHash = await hashPassword(password);
-      const isUpdated = await User.findOneAndUpdate(
+      await Admin.findOneAndUpdate(
         { email: email },
         { $set: { password: passwordHash } },
         { new: true }
       );
-      return res.status(200).send({
-        message: "Password updated successfully",
-      });
-    } else {
-      return res.status(400).send({
-        error: "Token is expired",
-      });
+      return res.status(200).send({ message: "Admin password changed successfully." });
     }
+
+    const userData = await User.findOne({ email });
+    if (userData) {
+      if (await comparePassword(password, userData.password)) {
+        return res.status(400).send({ error: "New password must be different." });
+      }
+      const passwordHash = await hashPassword(password);
+      await User.findOneAndUpdate(
+        { email: email },
+        { $set: { password: passwordHash } },
+        { new: true }
+      );
+      return res.status(200).send({ message: "User password changed successfully." });
+    }
+
+    return res.status(404).send({ error: "User or Admin not found." });
   } catch (error) {
-    console.log(error);
-    return res.status(500).send({ error: "Something broke" });
+    console.error(error);
+    return res.status(500).send({ error: "An unexpected error occurred. Please try again later." });
   }
 };
+
 
 // exports.profile = async (req, res) => {
 //   try {

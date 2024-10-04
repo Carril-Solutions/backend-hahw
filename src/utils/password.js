@@ -13,6 +13,6 @@ exports.hashPassword = (password) => {
 };
 
 
-exports.comparePassword = (password, hashedPassword) => {
-  return bcrypt.compare(password, hashedPassword);
+exports.comparePassword = async (password, hashedPassword) => {
+  return await bcrypt.compare(password, hashedPassword);
 };
