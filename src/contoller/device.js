@@ -1,5 +1,6 @@
 const Device = require("../model/device");
 const Division = require("../model/division");
+const DeviceMaintenance = require("../model/deviceMaintenanceModel");
 
 const {
   validateFields,
@@ -71,6 +72,25 @@ exports.createDevice = async (req, res) => {
     };
 
     const device = await Device.create(data);
+
+    const currentDate = new Date();
+    const maintenanceRecords = [];
+
+    for (let i = 0; i < maintainance; i++) {
+      const maintenanceDate = new Date(currentDate);
+      maintenanceDate.setMonth(currentDate.getMonth() + i);
+
+      maintenanceRecords.push({
+        deviceId: device._id,
+        status: 'Upcoming Maintenance',
+        maintainDate: maintenanceDate,
+        engineerName: null,
+        contactNumber: null
+      });
+    }
+
+    await DeviceMaintenance.insertMany(maintenanceRecords);
+
     return res.status(201).send({ data: device, message: "Device created successfully" });
   } catch (error) {
     if (error.name === 'ValidationError') {
