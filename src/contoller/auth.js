@@ -89,7 +89,7 @@ exports.loginUser = async (req, res) => {
           "The credentials you provided are incorrect, please try again.",
       });
     }
-
+        
     const match = await comparePassword(password, user.password);
     if (!match)
       return res.status(400).send({
@@ -217,20 +217,6 @@ exports.resetPassword = async (req, res) => {
 
     const email = data.email;
 
-    const adminData = await Admin.findOne({ email });
-    if (adminData) {
-      if (await comparePassword(password, adminData.password)) {
-        return res.status(400).send({ error: "New password must be different." });
-      }
-      const passwordHash = await hashPassword(password);
-      await Admin.findOneAndUpdate(
-        { email: email },
-        { $set: { password: passwordHash } },
-        { new: true }
-      );
-      return res.status(200).send({ message: "Admin password changed successfully." });
-    }
-
     const userData = await User.findOne({ email });
     if (userData) {
       if (await comparePassword(password, userData.password)) {
@@ -243,6 +229,20 @@ exports.resetPassword = async (req, res) => {
         { new: true }
       );
       return res.status(200).send({ message: "User password changed successfully." });
+    }
+
+    const adminData = await Admin.findOne({ email });
+    if (adminData) {
+      if (await comparePassword(password, adminData.password)) {
+        return res.status(400).send({ error: "New password must be different." });
+      }
+      const passwordHash = await hashPassword(password);
+      await Admin.findOneAndUpdate(
+        { email: email },
+        { $set: { password: passwordHash } },
+        { new: true }
+      );
+      return res.status(200).send({ message: "Admin password changed successfully." });
     }
 
     return res.status(404).send({ error: "User or Admin not found." });
