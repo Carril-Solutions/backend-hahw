@@ -24,7 +24,7 @@ const sendEmail = async (email, data,emailTemplate) => {
         const renderedEmail = ejs.render(template,data)
 
     const mailOptions = {
-      from: '"carrel" <info@farmlandbazaar.com>',
+      from: '"carril" <info@farmlandbazaar.com>',
       to: email,
       subject: emailTemplate == "forgot" ? "Forgot password" : "Your Login email and Password",
       html : renderedEmail,
