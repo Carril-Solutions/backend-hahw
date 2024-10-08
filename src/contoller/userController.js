@@ -13,6 +13,9 @@ const {
   alreadyFound,
 } = require("../validatores/commonValidations");
 const mongoose = require("mongoose");
+const sendEmail = require("../utils/sendEmail");
+const bcrypt = require('bcryptjs')
+
 
 exports.createAdmin = async (req, res) => {
   try {
@@ -70,9 +73,27 @@ exports.createUser = async (req, res) => {
 
     const deviceIds = device.map(id => new mongoose.Types.ObjectId(id));
   
+    const generatePassword = (length) => {
+      const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
+      let password = "";
+      for (let i = 0; i < length; i++) {
+        password += charset.charAt(Math.floor(Math.random() * charset.length));
+      }
+      return password;
+    };
+
+    const password = generatePassword(10);
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const emailData = {
+      name,
+      email,
+      password
+    }
+
     const data = {
       name,
       email,
+      password: hashedPassword,
       phone,
       role,
       division,
@@ -87,6 +108,12 @@ exports.createUser = async (req, res) => {
     }
 
     const users = await User.create(data);
+
+    await sendEmail(
+      email,
+      emailData,
+      "userPassword",
+    );
     return res
       .status(201)
       .send({ data: users, message: "User created successfully" });

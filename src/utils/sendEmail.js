@@ -26,7 +26,7 @@ const sendEmail = async (email, data,emailTemplate) => {
     const mailOptions = {
       from: '"carrel" <info@farmlandbazaar.com>',
       to: email,
-      subject: "Forgot password",
+      subject: emailTemplate == "forgot" ? "Forgot password" : "Your Login email and Password",
       html : renderedEmail,
       //html: `<h3>Hi, </h3><p>We received a request to reset the password for your account associated with this email address. If you made this request, please click the link below to reset your password <b><a href=${link}>link</a></b> to reset password.</p>`,
     };
