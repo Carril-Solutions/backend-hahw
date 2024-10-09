@@ -26,7 +26,9 @@ exports.createDevice = async (req, res) => {
       warningHotTemprature,
       warningWarmTemprature,
       warningDifferentialTemprature,
-      notifiedUsers
+      notifiedUsers,
+      ambiant,
+      gap_between
     } = req.body;
 
     const missingFields = [];
@@ -45,6 +47,9 @@ exports.createDevice = async (req, res) => {
     if (!warningWarmTemprature) missingFields.push("warningWarmTemprature");
     if (!warningDifferentialTemprature) missingFields.push("warningDifferentialTemprature");
     if (!notifiedUsers) missingFields.push("notifiedUsers");
+    if (!ambiant) missingFields.push("ambiant");
+    if (!gap_between) missingFields.push("gap_between");
+
 
     if (missingFields.length > 0) {
       return res.status(400).send({
@@ -69,16 +74,23 @@ exports.createDevice = async (req, res) => {
       warningDifferentialTemprature,
       notifiedUsers,
       adminId: admin,
+      ambiant,
+      gap_between
     };
 
     const device = await Device.create(data);
 
-    const currentDate = new Date();
+    const selectDate = new Date(req.body.deployDate);
+
+    if (isNaN(selectDate)) {
+      return res.status(400).send({ error: "Invalid deployDate format." });
+    }
+
     const maintenanceRecords = [];
 
     for (let i = 0; i < maintainance; i++) {
-      const maintenanceDate = new Date(currentDate);
-      maintenanceDate.setMonth(currentDate.getMonth() + i);
+      const maintenanceDate = new Date(selectDate);
+      maintenanceDate.setMonth(selectDate.getMonth() + i);
 
       maintenanceRecords.push({
         deviceId: device._id,
@@ -90,6 +102,8 @@ exports.createDevice = async (req, res) => {
     }
 
     await DeviceMaintenance.insertMany(maintenanceRecords);
+
+
 
     return res.status(201).send({ data: device, message: "Device created successfully" });
   } catch (error) {
@@ -134,6 +148,8 @@ exports.updateDevice = async (req, res) => {
       warningWarmTemprature,
       warningDifferentialTemprature,
       notifiedUsers,
+      ambiant,
+      gap_between
     } = req.body;
 
     if (deviceName) device.deviceName = deviceName;
@@ -150,6 +166,8 @@ exports.updateDevice = async (req, res) => {
     if (warningHotTemprature) device.warningHotTemprature = warningHotTemprature;
     if (warningWarmTemprature) device.warningWarmTemprature = warningWarmTemprature;
     if (warningDifferentialTemprature) device.warningDifferentialTemprature = warningDifferentialTemprature;
+    if (ambiant) device.ambiant = ambiant;
+    if (gap_between) device.gap_between = gap_between;
 
     if (notifiedUsers !== undefined) {
       device.notifiedUsers = notifiedUsers;
@@ -220,7 +238,7 @@ exports.getDevice = async (req, res) => {
     }
 
     const search = req.query.search || "";
-    
+
     let searchQuery = {};
 
     if (search) {

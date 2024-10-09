@@ -97,6 +97,14 @@ const deviceSchema = new Schema({
         type: mongoose.Schema.Types.ObjectId,
         required: true
     },
+    ambiant: {
+        type: Number,
+        required: true
+    },
+    gap_between: {
+        type: Number,
+        required: true
+    }
 }, { timestamps: true });
 
 const Device = mongoose.model("device", deviceSchema);
