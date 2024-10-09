@@ -44,13 +44,14 @@ exports.createAdmin = async (req, res) => {
     return res
       .status(201)
       .send({ data: users, message: "Admin created successfully" });
-  } catch (error) {if (error.name === 'ValidationError') {
-    return res.status(400).send({
-      error: Object.keys(error.errors).map(field =>
-        `${field}: ${error.errors[field].message}`
-      ).join(", ")
-    });
-  }
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).send({
+        error: Object.keys(error.errors).map(field =>
+          `${field}: ${error.errors[field].message}`
+        ).join(", ")
+      });
+    }
     console.log(error);
     return res.status(500).send({ error: "Something broke" });
   }
@@ -70,9 +71,13 @@ exports.createUser = async (req, res) => {
     if (userFound) {
       return alreadyFound(res);
     }
+    const admin = await Admin.findOne({ email });
+    if (admin) {
+      return alreadyFound(res);
+    }
 
     const deviceIds = device.map(id => new mongoose.Types.ObjectId(id));
-  
+
     const generatePassword = (length) => {
       const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
       let password = "";
@@ -142,7 +147,7 @@ exports.updateUser = async (req, res) => {
       return validateFound(res);
     }
     const { name, email, password, phone, role, division, status, zone, device } = req.body;
-    
+
     if (name) user.name = name;
     if (email) user.email = email;
     if (password) user.password = password;
@@ -178,7 +183,7 @@ exports.updateUserRole = async (req, res) => {
     if (req.user.role !== "admin") {
       return res.status(403).send({ error: "Unauthorized to update user roles." });
     }
-    
+
     const userData = req.body.userData;
 
     if (!Array.isArray(userData) || userData.length === 0) {
@@ -190,7 +195,7 @@ exports.updateUserRole = async (req, res) => {
       if (!userId || !role) {
         throw new Error("Both userId and role are required.");
       }
-      
+
       const user = await User.findById(userId);
       if (!user) {
         throw new Error(`User with ID ${userId} not found.`);
@@ -201,7 +206,7 @@ exports.updateUserRole = async (req, res) => {
     });
 
     await Promise.all(updatePromises);
-    
+
     return res.status(200).send({ message: "User roles updated successfully." });
   } catch (error) {
     if (error.message.includes("not found")) {
