@@ -216,27 +216,8 @@ exports.updateDeviceStatus = async (req, res) => {
 
 exports.getDevice = async (req, res) => {
   try {
-    let page = parseInt(req.query.page) || 1;
-    let limit = parseInt(req.query.limit) || 10;
     const divisionNameFilter = req.query.division || "";
     const statusFilter = req.query.status;
-    let startIndex = (page - 1) * limit;
-    let endIndex = page * limit;
-
-    const result = {};
-
-    const order = req.query.order || "";
-    const sort = req.query.sort || "";
-
-    let sortOrder = {};
-    if (order === "ascending") {
-      sortOrder = { [sort]: 1 };
-    } else if (order === "descending") {
-      sortOrder = { [sort]: -1 };
-    } else {
-      sortOrder = { createdAt: -1 };
-    }
-
     const search = req.query.search || "";
 
     let searchQuery = {};
@@ -264,53 +245,87 @@ exports.getDevice = async (req, res) => {
       searchQuery.status = statusFilter === 'true';
     }
 
-    const devices = await Device.find(searchQuery)
-      .populate({
-        path: "division",
-        model: "division",
-        select: "_id divisionName",
-      })
-      .populate({
-        path: "zone",
-        model: "zone",
-        select: "_id zoneName",
-      })
-      .populate({
-        path: "location",
-        model: "location",
-        select: "_id locationName",
-      })
-      .sort(sortOrder)
-      .skip(startIndex)
-      .limit(limit);
-
+    let page = parseInt(req.query.page);
+    let limit = parseInt(req.query.limit);
+    let devices;
     const totalCount = await Device.countDocuments(searchQuery);
 
-    if (endIndex < totalCount) {
-      result.next = {
-        page: page + 1,
-        limit: limit,
-      };
-    }
+    if (isNaN(page) || isNaN(limit) || page === 0 || limit === 0) {
+      devices = await Device.find(searchQuery)
+        .populate({
+          path: "division",
+          model: "division",
+          select: "_id divisionName",
+        })
+        .populate({
+          path: "zone",
+          model: "zone",
+          select: "_id zoneName",
+        })
+        .populate({
+          path: "location",
+          model: "location",
+          select: "_id locationName",
+        });
+    } else {
+      const startIndex = (page - 1) * limit;
+      const endIndex = page * limit;
 
-    if (startIndex > 0) {
-      result.previous = {
-        page: page - 1,
-        limit: limit,
-      };
+      devices = await Device.find(searchQuery)
+        .populate({
+          path: "division",
+          model: "division",
+          select: "_id divisionName",
+        })
+        .populate({
+          path: "zone",
+          model: "zone",
+          select: "_id zoneName",
+        })
+        .populate({
+          path: "location",
+          model: "location",
+          select: "_id locationName",
+        })
+        .sort({ createdAt: -1 }) 
+        .skip(startIndex)
+        .limit(limit);
+
+      const result = {};
+
+      if (endIndex < totalCount) {
+        result.next = {
+          page: page + 1,
+          limit: limit,
+        };
+      }
+
+      if (startIndex > 0) {
+        result.previous = {
+          page: page - 1,
+          limit: limit,
+        };
+      }
+
+      result.totalCounts = totalCount;
+      return res.status(200).send({
+        message: "Devices fetched successfully",
+        data: devices,
+        pagination: result,
+      });
     }
 
     return res.status(200).send({
       message: "Devices fetched successfully",
       data: devices,
       totalCounts: totalCount,
-      pagination: result,
     });
   } catch (error) {
     console.error(error);
     return res.status(500).send({ error: "Something broke" });
   }
 };
+
 
 
 exports.deleteDevice = async (req, res) => {
