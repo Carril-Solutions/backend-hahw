@@ -63,8 +63,8 @@ const transformData = (data) => {
         sensorStatus: data.sensorStatusArr || [],
         systemState: {
             panelDoorStatus: data.SystemState?.[0] == 0 ? "Closed" : "Open" || null,
-            mainPowerStatus: data.SystemState?.[1] == 0 ? "Not Working" : "Working" || null,
-            smpsStatus: data.SystemState?.[2] == 0 ? "Not Working" : "Working" || null,
+            mainPowerStatus: data.SystemState?.[1] == 0 ? "OFF" : "ON" || null,
+            smpsStatus: data.SystemState?.[2] == 0 ? "OFF" : "ON" || null,
             batteryPercentage: data.SystemState?.[3] || null,
             tempBoxAmbient1: data.SystemState?.[4] || null,
             tempBoxAmbient2: data.SystemState?.[5] || null,
@@ -102,14 +102,36 @@ if (mongoose.models[modelName]) {
 exports.getIotData = async (req, res) => {
     try {
         const deviceId = req.params.deviceId;
-        const rawData = await DynamicModel.find({ key: deviceId}).lean();
-        if (!rawData || rawData.length === 0) {
+        const rawDatass = await DynamicModel.find({ key: deviceId });
+        
+        if (!rawDatass || rawDatass.length === 0) {
             return res.status(404).send({ success: false, message: 'No data found' });
         }
 
-        const transformedData = rawData.map(transformData);
+        let systemState;
+        let datetime;
+        const mergedTemperatureData = rawDatass.reduce((acc, curr) => {
+            const transformed = transformData(curr);
+            if (transformed && transformed.temperatureData) {
+                acc.push(...transformed.temperatureData); 
+            }
+            systemState = transformed.systemState;
+            datetime = transformed.datetime;
+            return acc;
+        }, []);
+        
 
-        res.status(200).send({ success: true, data: transformedData });
+        const finalResponse = {
+            id: rawDatass[0]._id,
+            key: rawDatass[0].key,
+            timestamp: rawDatass[0].createdAt,
+            temperatureData: mergedTemperatureData,
+            sensorStatus: rawDatass.map(item => item.sensorStatusArr).flat(),
+            systemState,
+            datetime:datetime
+        };
+
+        res.status(200).send({ success: true, data: finalResponse });
     } catch (error) {
         console.error("Error fetching data:", error);
         res.status(500).send({ success: false, error: "Unable to retrieve data" });
