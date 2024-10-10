@@ -38,6 +38,8 @@ exports.createDynamicModelandAddedData = async (req, res) => {
 const transformData = (data) => {
     if (!data) return null;
 
+    let dtData = data.DT;
+    
     const formatTime = (time) => {
         if (!time) return null;
         const { hour, minute, second } = time;
@@ -76,14 +78,14 @@ const transformData = (data) => {
         },
         datetime: {
             time: formatTime({
-                hour: data.DT?.[0]?.[0] || null,
-                minute: data.DT?.[0]?.[1] || null,
-                second: data.DT?.[0]?.[2] || null
+                hour: dtData != undefined ? dtData?.[0]?.[0] : null,
+                minute: dtData != undefined ? dtData?.[0]?.[1] : null,
+                second:  dtData != undefined ? dtData?.[0]?.[2] : null
             }),
             date: formatDate({
-                day: data.DT?.[1]?.[0] || null,
-                month: data.DT?.[1]?.[1] || null,
-                year: data.DT?.[1]?.[2] || null
+                day: dtData != undefined ? dtData?.[1]?.[0] : null,
+                month: dtData != undefined ? dtData?.[1]?.[1] : null,
+                year: dtData != undefined ? dtData?.[1]?.[2] : null
             })
         }
     };
@@ -109,14 +111,27 @@ exports.getIotData = async (req, res) => {
         }
 
         let systemState;
-        let datetime;
+        let time;
+        let date;
         const mergedTemperatureData = rawDatass.reduce((acc, curr) => {
             const transformed = transformData(curr);
+            console.log(transformed);
+            
             if (transformed && transformed.temperatureData) {
                 acc.push(...transformed.temperatureData); 
             }
-            systemState = transformed.systemState;
-            datetime = transformed.datetime;
+            if (transformed && transformed.systemState) {
+                systemState = transformed.systemState;
+            }
+        
+            if (transformed && transformed.datetime) {
+                if (transformed.datetime.time && transformed.datetime.time !== 'null:null:null') {
+                    time = transformed.datetime.time;
+                }
+                if (transformed.datetime.date && transformed.datetime.date !== 'null/null/null') {
+                    date = date || transformed.datetime.date ;
+                }
+            }
             return acc;
         }, []);
         
@@ -128,7 +143,10 @@ exports.getIotData = async (req, res) => {
             temperatureData: mergedTemperatureData,
             sensorStatus: rawDatass.map(item => item.sensorStatusArr).flat(),
             systemState,
-            datetime:datetime
+            datetime: {
+                time: time || 'null:null:null',
+                date: date || 'null/null/null'
+            }
         };
 
         res.status(200).send({ success: true, data: finalResponse });
