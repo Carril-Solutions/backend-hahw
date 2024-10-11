@@ -61,12 +61,6 @@ const deviceSchema = new Schema({
     },
     adminId: {
         type: mongoose.Schema.Types.ObjectId,
-    },
-    ambiant: {
-        type: Number,
-    },
-    gap_between: {
-        type: Number,
     }
 }, { timestamps: true });
 

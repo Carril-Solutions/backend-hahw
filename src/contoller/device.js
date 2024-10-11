@@ -26,9 +26,7 @@ exports.createDevice = async (req, res) => {
       warningHotTemprature,
       warningWarmTemprature,
       warningDifferentialTemprature,
-      notifiedUsers,
-      ambiant,
-      gap_between
+      notifiedUsers
     } = req.body;
 
     const missingFields = [];
@@ -47,8 +45,6 @@ exports.createDevice = async (req, res) => {
     if (!warningWarmTemprature) missingFields.push("warningWarmTemprature");
     if (!warningDifferentialTemprature) missingFields.push("warningDifferentialTemprature");
     if (!notifiedUsers) missingFields.push("notifiedUsers");
-    if (!ambiant) missingFields.push("ambiant");
-    if (!gap_between) missingFields.push("gap_between");
 
 
     if (missingFields.length > 0) {
@@ -73,9 +69,7 @@ exports.createDevice = async (req, res) => {
       warningWarmTemprature,
       warningDifferentialTemprature,
       notifiedUsers,
-      adminId: admin,
-      ambiant,
-      gap_between
+      adminId: admin
     };
 
     const device = await Device.create(data);
@@ -147,9 +141,7 @@ exports.updateDevice = async (req, res) => {
       warningHotTemprature,
       warningWarmTemprature,
       warningDifferentialTemprature,
-      notifiedUsers,
-      ambiant,
-      gap_between
+      notifiedUsers
     } = req.body;
 
     if (deviceName) device.deviceName = deviceName;
@@ -166,8 +158,6 @@ exports.updateDevice = async (req, res) => {
     if (warningHotTemprature) device.warningHotTemprature = warningHotTemprature;
     if (warningWarmTemprature) device.warningWarmTemprature = warningWarmTemprature;
     if (warningDifferentialTemprature) device.warningDifferentialTemprature = warningDifferentialTemprature;
-    if (ambiant) device.ambiant = ambiant;
-    if (gap_between) device.gap_between = gap_between;
 
     if (notifiedUsers !== undefined) {
       device.notifiedUsers = notifiedUsers;
