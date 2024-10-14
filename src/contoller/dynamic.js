@@ -178,6 +178,7 @@ exports.getIotData = async (req, res) => {
   }
 };
 
+//device warnings
 exports.getDeviceWarnings = async (req, res) => {
   try {
     const deviceName = req.query.deviceName;
