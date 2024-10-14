@@ -22,6 +22,9 @@ const deviceMaintenanceSchema = new Schema({
     contactNumber: {
         type: String,
         default: null
+    },
+    adminId: {
+        type: mongoose.Schema.Types.ObjectId,
     }
 }, { timestamps: true });
 

@@ -8,6 +8,10 @@ const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
+const http = require("http");
+const { Server } = require("socket.io");
+const cron = require("node-cron");
+const DeviceMaintenance = require("./src/model/deviceMaintenanceModel");
 
 const app = express();
 
@@ -54,6 +58,9 @@ app.use(
   })
 );
 
+const server = http.createServer(app);
+const io = new Server(server);
+
 // create a write stream (in append mode)
 var accessLogStream = fs.createWriteStream(path.join(__dirname, "access.log"), {
   flags: "a",
@@ -71,11 +78,71 @@ fs.readdirSync(path.join(__dirname, 'src', 'routers')).map((r) => {
   app.use("/api", require(path.join(__dirname, 'src', 'routers', r)));
 });
 
+const adminSockets = {};
 
-app.get("/api", async (req, res) => {
-    res.json({ ok: true, message: "Great day!" });
+io.on('connection', (socket) => {
+  socket.on('registerAdmin', (adminId) => {
+    adminSockets[adminId] = socket;
   });
 
-app.listen(PORT, () => {
-    console.log(`app is running on ${PORT}`);
+  socket.on('error', (error) => {
+    console.error("Socket error:", error);
+  });
+
+  socket.on('disconnect', () => {
+    for (const adminId in adminSockets) {
+      if (adminSockets[adminId] === socket) {
+        delete adminSockets[adminId];
+        break;
+      }
+    }
+  });
+});
+
+exports.scheduleMaintenanceNotifications = async () => {
+  const today = new Date();
+  const threeDaysFromNow = new Date(today);
+  threeDaysFromNow.setDate(today.getDate() + 3);
+
+  try {
+    const reminders = await DeviceMaintenance.find({
+      maintainDate: {
+        $gte: today,
+        $lte: threeDaysFromNow,
+      },
+      status: "Upcoming Maintenance",
+    }).populate({
+      path: "deviceId",
+      model: "device",
+      select: "_id deviceName",
+    });
+
+    reminders.forEach(reminder => {
+      const adminId = reminder.adminId.toString();
+      console.log("🚀 ~ exports.scheduleMaintenanceNotifications= ~ adminId:", adminId)
+      const socket = adminSockets[adminId];
+      console.log("🚀 ~ exports.scheduleMaintenanceNotifications= ~ socket:", socket)
+      
+      if (socket) {
+        console.log(`Reminder: Maintenance for ${reminder?.deviceId?.deviceName} is due on ${reminder?.maintainDate}, a ticket should be create for maintenance.`)
+        socket.emit('maintenanceReminder', {
+          message: `Reminder: Maintenance for ${reminder?.deviceId?.deviceName} is due on ${reminder?.maintainDate}, a ticket should be create for maintenance.`,
+        });
+      }
+    });
+    
+  } catch (error) {
+    console.error("Error fetching reminders:", error);
+  }
+};
+
+cron.schedule(`* * * * *`, exports.scheduleMaintenanceNotifications);
+
+app.get("/api", async (req, res) => {
+  res.json({ ok: true, message: "Great day!" });
+});
+
+server.listen(PORT, () => {
+  console.log(`App is running on ${PORT}`);
+  console.log(`Socket.io is available at http://localhost:${PORT}/socket.io/`);
 });
