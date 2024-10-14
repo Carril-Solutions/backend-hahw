@@ -1,0 +1,39 @@
+name: Node.js Backend API Deployment
+
+on:
+  push:
+    branches:
+      - Node-Dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository from dev-api branch
+      uses: actions/checkout@v3
+      with:
+        ref: Node-Dev
+
+    - name: Set up SSH
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEYS }}
+
+    - name: Copy files to server using rsync
+      run: |
+        rsync -avz \
+        -e "ssh -o StrictHostKeyChecking=no" \
+        ./ ${{ secrets.HOSTINGER_USERNAME }}@${{ secrets.HOSTINGER_HOST }}:/home/carril-dev-api/htdocs/dev-api.carril.io/
+
+    - name: Run deployment commands on server
+      run: |
+        ssh -o StrictHostKeyChecking=no -p 22 ${{ secrets.HOSTINGER_USERNAME }}@${{ secrets.HOSTINGER_HOST }} << EOF
+        set -e
+        cd /home/carril-dev-api/htdocs/dev-api.carril.io
+        sudo npm install
+        sudo npm install -g pm2
+        sudo pm2 delete carril-backend || true
+        sudo pm2 start npm --name "carril-backend" -- start
+        sudo pm2 save
+        EOF
