@@ -57,6 +57,11 @@ exports.getAllDeviceTickets = async (req, res) => {
             .find(filter)
             .sort({ createdAt: -1 })
             .populate({
+                path: "deviceId",
+                model: "device",
+                select: "_id deviceName",
+            })
+            .populate({
                 path: "location",
                 model: "location",
                 select: "_id locationName",
