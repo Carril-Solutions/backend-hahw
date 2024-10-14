@@ -41,12 +41,10 @@ const deviceTicketSchema = new Schema({
     },
     engineerName: {
         type: String,
-        required: [true, 'Engineer name is required'],
         minlength: [3, 'Engineer name must be at least 3 characters long']
     },
     engineerEmail: {
         type: String,
-        required: [true, 'Engineer email is required'],
         validate: {
             validator: function(v) {
                 return /^\S+@\S+\.\S+$/.test(v);
@@ -56,7 +54,6 @@ const deviceTicketSchema = new Schema({
     },
     contactNumber: {
         type: String,
-        required: [true, 'Engineer contact number is required'],
         validate: {
             validator: function(v) {
                 return v === null || /^\d{10}$/.test(v);

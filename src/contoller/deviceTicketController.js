@@ -6,13 +6,13 @@ exports.createDeviceTicket = async (req, res) => {
         if (req.user.role !== "admin") {
             return res.status(403).send({ error: "Unauthorized to create" });
         }
-        const { deviceId, remark, engineerName, engineerEmail, contactNumber, sensor, location } = req.body;
+        const { deviceId, remark, sensor, location } = req.body;
 
-        if (!deviceId || !sensor || !location || !remark || !engineerName || !engineerEmail || !contactNumber) {
+        if (!deviceId || !sensor || !location || !remark ) {
             return validateFields(res);
         }
 
-        const data = { deviceId, remark, engineerName, engineerEmail, contactNumber, sensor, location };
+        const data = { deviceId, remark, sensor, location };
         const ticketRecord = await DeviceTicket.create(data);
 
         return res.status(201).send({ data: ticketRecord, message: "Device ticket created successfully" });
