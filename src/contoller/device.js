@@ -91,6 +91,7 @@ exports.createDevice = async (req, res) => {
         status: 'Upcoming Maintenance',
         maintainDate: maintenanceDate,
         engineerName: null,
+        engineerEmail: null,
         contactNumber: null,
         adminId: admin
       });

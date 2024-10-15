@@ -59,7 +59,14 @@ app.use(
 );
 
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: ["http://localhost:5173", "https://dev-env.carril.io"],
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
+
 
 // create a write stream (in append mode)
 var accessLogStream = fs.createWriteStream(path.join(__dirname, "access.log"), {
@@ -72,7 +79,7 @@ app.use(morgan("combined", { stream: accessLogStream }));
 // fs.readdirSync("./routers").map((r) => {
 //     app.use("/api", require(`./routers/${r}`));
 // });
- 
+
 
 fs.readdirSync(path.join(__dirname, 'src', 'routers')).map((r) => {
   app.use("/api", require(path.join(__dirname, 'src', 'routers', r)));
@@ -119,18 +126,15 @@ exports.scheduleMaintenanceNotifications = async () => {
 
     reminders.forEach(reminder => {
       const adminId = reminder.adminId.toString();
-      console.log("🚀 ~ exports.scheduleMaintenanceNotifications= ~ adminId:", adminId)
       const socket = adminSockets[adminId];
-      console.log("🚀 ~ exports.scheduleMaintenanceNotifications= ~ socket:", socket)
-      
+
       if (socket) {
-        console.log(`Reminder: Maintenance for ${reminder?.deviceId?.deviceName} is due on ${reminder?.maintainDate}, a ticket should be create for maintenance.`)
         socket.emit('maintenanceReminder', {
           message: `Reminder: Maintenance for ${reminder?.deviceId?.deviceName} is due on ${reminder?.maintainDate}, a ticket should be create for maintenance.`,
         });
       }
     });
-    
+
   } catch (error) {
     console.error("Error fetching reminders:", error);
   }

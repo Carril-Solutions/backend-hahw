@@ -47,7 +47,7 @@ const deviceTicketSchema = new Schema({
         type: String,
         validate: {
             validator: function(v) {
-                return /^\S+@\S+\.\S+$/.test(v);
+                return v === null || /^\S+@\S+\.\S+$/.test(v);
             },
             message: props => `${props.value} is not a valid email!`
         }
