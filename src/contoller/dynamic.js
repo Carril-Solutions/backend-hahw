@@ -124,7 +124,7 @@ exports.getIotData = async (req, res) => {
     const rawDatass = await DynamicModel.find({ key: deviceId });
 
     if (!rawDatass || rawDatass.length === 0) {
-      return res.status(404).send({ success: false, message: "No data found" });
+      return res.status(200).send({ data: [], success: true, message: "No data available" });
     }
 
     let systemState;
