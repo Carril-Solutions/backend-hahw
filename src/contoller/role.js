@@ -31,32 +31,46 @@ exports.createRole = async (req, res) => {
   }
 };
 
-exports.updateRole = async (req, res) => {
+exports.updateRoles = async (req, res) => {
   try {
     const admin = req.user?._id;
-    const roleId = req.params.roleId;
-    if (!roleId) {
-      return validateId(res);
+    const rolesData = req.body.roles;
+
+    if (!Array.isArray(rolesData) || rolesData.length === 0) {
+      return res.status(400).send({ error: "Invalid input: roles data must be an array" });
     }
-    const roles = await Role.findById(roleId);
-    if (!roles) {
-      return validateFound(res);
+
+    const updatedRoles = [];
+
+    for (const roleData of rolesData) {
+      const { roleId, role, status, addMachines, viewMachines } = roleData;
+
+      if (!roleId) {
+        return validateId(res);
+      }
+
+      const roleToUpdate = await Role.findById(roleId);
+      if (!roleToUpdate) {
+        return validateFound(res);
+      }
+
+      if (role) roleToUpdate.role = role;
+      if (status !== undefined) roleToUpdate.status = status;
+      if (addMachines) roleToUpdate.addMachines = addMachines;
+      if (viewMachines) roleToUpdate.viewMachines = viewMachines;
+      if (admin) roleToUpdate.adminId = admin;
+
+      await roleToUpdate.save();
+      updatedRoles.push(roleToUpdate);
     }
-    const { role, status, addMachines, viewMachines } = req.body;
-    if (role) roles.role = role;
-    if (status !== undefined) roles.status = status;
-    if (addMachines) roles.addMachines = addMachines;
-    if (viewMachines) roles.viewMachines = viewMachines;
-    if (admin) roles.adminId = admin;
-    await roles.save();
-    return res
-      .status(201)
-      .send({ data: roles, message: "Role updated successfully" });
+
+    return res.status(200).send({ data: updatedRoles, message: "Roles updated successfully" });
   } catch (error) {
     console.log(error);
     return res.status(500).send({ error: "Something broke" });
   }
 };
+
 
 exports.updateRoleStatus = async (req, res) => {
   try {
