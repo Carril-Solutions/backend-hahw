@@ -233,12 +233,12 @@ exports.getDeviceWarnings = async (req, res) => {
         // Axle sensor warnings (Hot, Warm, Differential) for left and right side
         leftAxleSensors.forEach((temp, index) => {
           let sensorIndex = index + 1;
-          if (temp >= warningHotTemp && temp < warningWarmTemp) {
+          if (temp >= warningDifferentialTemp && temp < warningWarmTemp) {
             warningResults.push({
               warning_Type: "Axle Sensor",
               sensorNo: `${sensorIndex}`,
               temp,
-              status: "Hot",
+              status: "Differential",
               side: "left",
               axleNo: axleNo,
               trainNo,
@@ -250,7 +250,7 @@ exports.getDeviceWarnings = async (req, res) => {
             });
           } else if (
             temp >= warningWarmTemp &&
-            temp < warningDifferentialTemp
+            temp < warningHotTemp
           ) {
             warningResults.push({
               warning_Type: "Axle Sensor",
@@ -266,12 +266,12 @@ exports.getDeviceWarnings = async (req, res) => {
               zone: device.zone.zoneName,
               Date_Time: warningData.createdAt,
             });
-          } else if (temp >= warningDifferentialTemp) {
+          } else if (temp >= warningHotTemp) {
             warningResults.push({
               warning_Type: "Axle Sensor",
               sensorNo: `${sensorIndex}`,
               temp,
-              status: "Differential",
+              status: "Hot",
               side: "left",
               axleNo: axleNo,
               trainNo,
@@ -286,12 +286,12 @@ exports.getDeviceWarnings = async (req, res) => {
 
         rightAxleSensors.forEach((temp, index) => {
           let sensorIndex = index + 1;
-          if (temp >= warningHotTemp && temp < warningWarmTemp) {
+          if (temp >= warningDifferentialTemp && temp < warningWarmTemp) {
             warningResults.push({
               warning_Type: "Axle Sensor",
               sensorNo: `${sensorIndex}`,
               temp,
-              status: "Hot",
+              status: "Differential",
               side: "right",
               axleNo: axleNo,
               trainNo,
@@ -303,7 +303,7 @@ exports.getDeviceWarnings = async (req, res) => {
             });
           } else if (
             temp >= warningWarmTemp &&
-            temp < warningDifferentialTemp
+            temp < warningHotTemp
           ) {
             warningResults.push({
               warning_Type: "Axle Sensor",
@@ -319,12 +319,12 @@ exports.getDeviceWarnings = async (req, res) => {
               zone: device.zone.zoneName,
               Date_Time: warningData.createdAt,
             });
-          } else if (temp >= warningDifferentialTemp) {
+          } else if (temp >= warningHotTemp) {
             warningResults.push({
               warning_Type: "Axle Sensor",
               sensorNo: `${sensorIndex}`,
               temp,
-              status: "Differential",
+              status: "Hot",
               side: "right",
               axleNo: axleNo,
               trainNo,
