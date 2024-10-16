@@ -120,8 +120,8 @@ if (mongoose.models[modelName]) {
 
 exports.getIotData = async (req, res) => {
   try {
-    const deviceId = req.params.deviceId;
-    const rawDatass = await DynamicModel.find({ key: deviceId });
+    const deviceName = req.query.deviceName;
+    const rawDatass = await DynamicModel.find({ key: deviceName });
 
     if (!rawDatass || rawDatass.length === 0) {
       return res.status(200).send({ data: [], success: true, message: "No data available" });
