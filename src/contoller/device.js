@@ -82,7 +82,7 @@ exports.createDevice = async (req, res) => {
 
     const maintenanceRecords = [];
 
-    for (let i = 0; i < maintainance; i++) {
+    for (let i = 0; i < 60; i++) {
       const maintenanceDate = new Date(selectDate);
       maintenanceDate.setMonth(selectDate.getMonth() + i);
 
