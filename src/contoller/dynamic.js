@@ -254,8 +254,19 @@ exports.getDeviceWarnings = async (req, res) => {
         }),
       };
 
+      let axleCount = 0;
+
       temperatureArr.forEach((axleData) => {
         const axleNo = axleData[0]; // Axle number
+        axleCount++; 
+        // coach number
+        let coachNo;
+        if (axleCount <= 6) {
+          coachNo = "Loco";
+        } else {
+          coachNo = Math.ceil((axleCount - 6) / 4); // Calculate coach number based on axle count
+        }
+
         const leftAxleSensors = axleData.slice(1, 5); // Left side axle sensors
         const rightAxleSensors = axleData.slice(10, 14); // Right side axle sensors
         const leftWheelTemps = axleData.slice(5, 7); // Left side wheel temps
@@ -278,6 +289,7 @@ exports.getDeviceWarnings = async (req, res) => {
               side: "Left",
               axleNo: axleNo,
               trainNo,
+              coachNo,
               direction: axleDirection,
               device_Name: device.deviceName,
               location: device.location.locationName,
@@ -294,6 +306,7 @@ exports.getDeviceWarnings = async (req, res) => {
               side: "Left",
               axleNo: axleNo,
               trainNo,
+              coachNo,
               direction: axleDirection,
               device_Name: device.deviceName,
               location: device.location.locationName,
@@ -310,6 +323,7 @@ exports.getDeviceWarnings = async (req, res) => {
               side: "Left",
               axleNo: axleNo,
               trainNo,
+              coachNo,
               direction: axleDirection,
               device_Name: device.deviceName,
               location: device.location.locationName,
@@ -331,6 +345,7 @@ exports.getDeviceWarnings = async (req, res) => {
               side: "Right",
               axleNo: axleNo,
               trainNo,
+              coachNo,
               direction: axleDirection,
               device_Name: device.deviceName,
               location: device.location.locationName,
@@ -347,6 +362,7 @@ exports.getDeviceWarnings = async (req, res) => {
               side: "Right",
               axleNo: axleNo,
               trainNo,
+              coachNo,
               direction: axleDirection,
               device_Name: device.deviceName,
               location: device.location.locationName,
@@ -363,6 +379,7 @@ exports.getDeviceWarnings = async (req, res) => {
               side: "Right",
               axleNo: axleNo,
               trainNo,
+              coachNo,
               direction: axleDirection,
               device_Name: device.deviceName,
               location: device.location.locationName,
@@ -384,6 +401,7 @@ exports.getDeviceWarnings = async (req, res) => {
               side: "Left",
               axleNo: axleNo,
               trainNo,
+              coachNo,
               direction: axleDirection,
               device_Name: device.deviceName,
               location: device.location.locationName,
@@ -404,6 +422,7 @@ exports.getDeviceWarnings = async (req, res) => {
               side: "Right",
               axleNo: axleNo,
               trainNo,
+              coachNo,
               direction: axleDirection,
               device_Name: device.deviceName,
               location: device.location.locationName,
@@ -424,6 +443,7 @@ exports.getDeviceWarnings = async (req, res) => {
               side: "Left",
               axleNo: axleNo,
               trainNo,
+              coachNo,
               direction: axleDirection,
               device_Name: device.deviceName,
               location: device.location.locationName,
@@ -444,6 +464,7 @@ exports.getDeviceWarnings = async (req, res) => {
               side: "Right",
               axleNo: axleNo,
               trainNo,
+              coachNo,
               direction: axleDirection,
               device_Name: device.deviceName,
               location: device.location.locationName,
