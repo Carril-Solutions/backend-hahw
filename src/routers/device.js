@@ -10,4 +10,7 @@ router.get("/devices", verifyJwtToken, ctrl.getDevice);
 router.patch("/updateDeviceStatus/:deviceId", verifyJwtToken, ctrl.updateDeviceStatus);
 router.delete("/deleteDevice/:deviceId", verifyJwtToken, ctrl.deleteDevice);
 
+//fetch Device Data
+router.get("/deviceData", verifyJwtToken, ctrl.getDeviceData);
+
 module.exports = router

@@ -258,7 +258,7 @@ exports.getDeviceWarnings = async (req, res) => {
 
       temperatureArr.forEach((axleData) => {
         const axleNo = axleData[0]; // Axle number
-        axleCount++; 
+        axleCount++;
         // coach number
         let coachNo;
         if (axleCount <= 6) {
