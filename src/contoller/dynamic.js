@@ -143,10 +143,12 @@ exports.getIotData = async (req, res) => {
       return res.status(404).json({ message: "Device not found" });
     }
 
-    const rawDatass = await DynamicModel.find({
-      key: deviceName,
-      ID: Number(train),
-    });
+    const query = { key: deviceName };
+    if (train) {
+      query.ID = Number(train);
+    }
+
+    const rawDatass = await DynamicModel.find(query);
 
     if (!rawDatass || rawDatass.length === 0) {
       return res
@@ -183,7 +185,7 @@ exports.getIotData = async (req, res) => {
       }
       return acc;
     }, []);
-
+    
     const finalResponse = {
       id: rawDatass[0]._id,
       key: rawDatass[0].key,
