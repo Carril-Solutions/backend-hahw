@@ -143,7 +143,10 @@ exports.getIotData = async (req, res) => {
       return res.status(404).json({ message: "Device not found" });
     }
 
-    const rawDatass = await DynamicModel.find({ key: deviceName, ID: Number(train) });
+    const rawDatass = await DynamicModel.find({
+      key: deviceName,
+      ID: Number(train),
+    });
 
     if (!rawDatass || rawDatass.length === 0) {
       return res
@@ -262,35 +265,41 @@ exports.getDeviceWarnings = async (req, res) => {
       )}/${year}`;
     };
 
+    const trainDateMap = new Map();
+    warnings.forEach((warningData) => {
+      const trainNo = warningData.ID;
+      const date = warningData.DT;
+      if (date) {
+        trainDateMap.set(trainNo, {
+          time: formatTime({
+            hour: date[0][0],
+            minute: date[0][1],
+            second: date[0][2],
+          }),
+          date: formatDate({
+            day: date[1][0],
+            month: date[1][1],
+            year: date[1][2],
+          }),
+        });
+      }
+    });
+
     warnings.forEach((warningData) => {
       const temperatureArr = warningData.temperature_arr;
       const trainNo = warningData.ID;
-      const date = warningData.DT;
-      const formattedDateTime = {
-        time: formatTime({
-          hour: date?.[0]?.[0],
-          minute: date?.[0]?.[1],
-          second: date?.[0]?.[2],
-        }),
-        date: formatDate({
-          day: date?.[1]?.[0],
-          month: date?.[1]?.[1],
-          year: date?.[1]?.[2],
-        }),
+
+      const formattedDateTime = trainDateMap.get(trainNo) || {
+        time: null,
+        date: null,
       };
 
       let axleCount = 0;
 
       temperatureArr.forEach((axleData) => {
-        const axleNo = axleData[0]; // Axle number
+        const axleNo = axleData[0];
         axleCount++;
-        // coach number
-        let coachNo;
-        if (axleCount <= 6) {
-          coachNo = "Loco";
-        } else {
-          coachNo = Math.ceil((axleCount - 6) / 4); // Calculate coach number based on axle count
-        }
+        let coachNo = axleCount <= 6 ? "Loco" : Math.ceil((axleCount - 6) / 4);
 
         const leftAxleSensors = axleData.slice(1, 5); // Left side axle sensors
         const rightAxleSensors = axleData.slice(10, 14); // Right side axle sensors
@@ -299,7 +308,7 @@ exports.getDeviceWarnings = async (req, res) => {
         const leftBrakeTemps = axleData.slice(7, 9); // Left side brake temps
         const rightBrakeTemps = axleData.slice(16, 18); // Right side brake temps
 
-        //direction of axle
+        // direction of axle
         const axleDirection = axleData[17] > axleData[18] ? "up" : "down";
 
         // Axle sensor warnings (Hot, Warm, Differential) for left and right side
@@ -505,31 +514,26 @@ exports.getDeviceWarnings = async (req, res) => {
     const totalCounts = warningResults.length;
     const totalPages = Math.ceil(totalCounts / limit);
 
+    const responseMessage =
+      warningResults.length > 0 ? "Warnings found" : "No warnings";
+
     if (isNaN(page) || isNaN(limit)) {
-      if (warningResults.length > 0) {
-        return res.status(200).json({
-          message: "Warnings found",
-          warningResults,
-          totalCounts: totalCounts,
-          currentPage: page,
-          totalPages: 1,
-        });
-      } else {
-        return res.status(200).json({ message: "No warnings" });
-      }
+      return res.status(200).json({
+        message: responseMessage,
+        warningResults,
+        totalCounts,
+        currentPage: page,
+        totalPages: 1,
+      });
     } else {
       const paginatedResults = warningResults.slice(startIndex, endIndex);
-      if (warningResults.length > 0) {
-        return res.status(200).json({
-          message: "Warnings found",
-          warningResults: paginatedResults,
-          totalCounts: totalCounts,
-          currentPage: page,
-          totalPages,
-        });
-      } else {
-        return res.status(200).json({ message: "No warnings" });
-      }
+      return res.status(200).json({
+        message: responseMessage,
+        warningResults: paginatedResults,
+        totalCounts,
+        currentPage: page,
+        totalPages,
+      });
     }
   } catch (error) {
     console.error("Error fetching data:", error);
