@@ -359,6 +359,10 @@ exports.deleteDevice = async (req, res) => {
 
 exports.getDeviceData = async (req, res) => {
   try {
+    const page = parseInt(req.query.page);
+    const limit = parseInt(req.query.limit);
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
     const deviceName = req.query.deviceName;
     const device = await Device.findOne({ deviceName })
       .populate({
@@ -389,7 +393,7 @@ exports.getDeviceData = async (req, res) => {
     }
 
     const trainMap = {};
-    const warningResults = {}; 
+    const warningResults = {};
     const formatTime = (time) => {
       if (!time) return null;
       const { hour, minute, second } = time;
@@ -437,7 +441,7 @@ exports.getDeviceData = async (req, res) => {
         warningResults[ID] = 0;
       }
 
-      //warning counting 
+      //warning counting
       const warningHotTemp = parseFloat(device.warningHotTemprature);
       const warningWarmTemp = parseFloat(device.warningWarmTemprature);
       const warningDifferentialTemp = parseFloat(
@@ -457,7 +461,7 @@ exports.getDeviceData = async (req, res) => {
         // Check for left warnings
         leftAxleSensors.forEach((temp) => {
           if (temp >= warningDifferentialTemp) {
-            warningResults[ID]++; 
+            warningResults[ID]++;
           }
         });
 
@@ -470,25 +474,25 @@ exports.getDeviceData = async (req, res) => {
         //for differential warnings for wheels and brakes
         leftWheelTemps.forEach((temp) => {
           if (temp >= warningDifferentialTemp) {
-            warningResults[ID]++; 
+            warningResults[ID]++;
           }
         });
 
         rightWheelTemps.forEach((temp) => {
           if (temp >= warningDifferentialTemp) {
-            warningResults[ID]++; 
+            warningResults[ID]++;
           }
         });
 
         leftBrakeTemps.forEach((temp) => {
           if (temp >= warningDifferentialTemp) {
-            warningResults[ID]++; 
+            warningResults[ID]++;
           }
         });
 
         rightBrakeTemps.forEach((temp) => {
           if (temp >= warningDifferentialTemp) {
-            warningResults[ID]++; 
+            warningResults[ID]++;
           }
         });
       });
@@ -506,7 +510,7 @@ exports.getDeviceData = async (req, res) => {
           ambientTemperature: ambientTemperature,
           formattedDateTime: formattedDateTime,
           direction: axleDirection,
-          warningCounts: warningResults[ID], 
+          warningCounts: warningResults[ID],
         };
       } else {
         trainMap[ID].totalAxles += temperature_arr.length;
@@ -516,7 +520,7 @@ exports.getDeviceData = async (req, res) => {
         trainMap[ID].ambientTemperature = ambientTemperature;
         trainMap[ID].formattedDateTime = formattedDateTime;
         trainMap[ID].direction = axleDirection;
-        trainMap[ID].warningCounts = warningResults[ID]; 
+        trainMap[ID].warningCounts = warningResults[ID];
       }
     });
 
@@ -530,10 +534,24 @@ exports.getDeviceData = async (req, res) => {
       zone: device.zone.zoneName,
       formattedDateTime: train.formattedDateTime,
       direction: train.direction,
-      warningCounts: train.warningCounts, 
+      warningCounts: train.warningCounts,
     }));
 
-    return res.status(200).json({ deviceName, trains: trainDetails });
+    const paginatedTrains =
+      limit > 0
+        ? trainDetails.slice(startIndex, startIndex + limit)
+        : trainDetails;
+    const totalCounts = trainDetails.length;
+
+    return res
+      .status(200)
+      .json({
+        deviceName,
+        trains: paginatedTrains,
+        totalCounts,
+        currentPage: page,
+        totalPages: Math.ceil(totalCounts / limit) || 1,
+      });
   } catch (error) {
     console.error("Error in getDeviceData:", error);
     return res.status(500).json({ error: "Something went wrong" });
