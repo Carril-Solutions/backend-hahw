@@ -121,6 +121,28 @@ if (mongoose.models[modelName]) {
 exports.getIotData = async (req, res) => {
   try {
     const deviceName = req.query.deviceName;
+
+    const device = await DeviceModel.findOne({ deviceName })
+      .populate({
+        path: "location",
+        model: "location",
+        select: "_id locationName",
+      })
+      .populate({
+        path: "division",
+        model: "division",
+        select: "_id divisionName",
+      })
+      .populate({
+        path: "zone",
+        model: "zone",
+        select: "_id zoneName",
+      });
+
+    if (!device) {
+      return res.status(404).json({ message: "Device not found" });
+    }
+
     const rawDatass = await DynamicModel.find({ key: deviceName });
 
     if (!rawDatass || rawDatass.length === 0) {
@@ -134,7 +156,6 @@ exports.getIotData = async (req, res) => {
     let date;
     const mergedTemperatureData = rawDatass.reduce((acc, curr) => {
       const transformed = transformData(curr);
-      console.log(transformed);
 
       if (transformed && transformed.temperatureData) {
         acc.push(...transformed.temperatureData);
@@ -171,6 +192,10 @@ exports.getIotData = async (req, res) => {
         time: time || "null:null:null",
         date: date || "null/null/null",
       },
+      deviceName: device.deviceName,
+      location: device.location.locationName,
+      division: device.division.divisionName,
+      zone: device.zone.zoneName,
     };
 
     res.status(200).send({ success: true, data: finalResponse });
