@@ -120,7 +120,7 @@ if (mongoose.models[modelName]) {
 
 exports.getIotData = async (req, res) => {
   try {
-    const deviceName = req.query.deviceName;
+    const { deviceName, train } = req.query;
 
     const device = await DeviceModel.findOne({ deviceName })
       .populate({
@@ -143,7 +143,7 @@ exports.getIotData = async (req, res) => {
       return res.status(404).json({ message: "Device not found" });
     }
 
-    const rawDatass = await DynamicModel.find({ key: deviceName });
+    const rawDatass = await DynamicModel.find({ key: deviceName, ID: Number(train) });
 
     if (!rawDatass || rawDatass.length === 0) {
       return res
