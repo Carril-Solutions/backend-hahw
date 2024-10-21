@@ -8,7 +8,7 @@ exports.createDeviceTicket = async (req, res) => {
         }
         const { deviceId, remark, sensor, location } = req.body;
 
-        if (!deviceId || !sensor || !location || !remark ) {
+        if (!deviceId || !sensor || !location || !remark) {
             return validateFields(res);
         }
 
@@ -49,8 +49,14 @@ exports.getAllDeviceTickets = async (req, res) => {
 
         if (fromDate || toDate) {
             filter.createdAt = {};
-            if (fromDate) filter.createdAt.$gte = new Date(fromDate);
-            if (toDate) filter.createdAt.$lte = new Date(toDate);
+            if (fromDate) {
+                filter.createdAt.$gte = new Date(fromDate);
+            }
+            if (toDate) {
+                const endOfToDate = new Date(toDate);
+                endOfToDate.setHours(23, 59, 59, 999);
+                filter.createdAt.$lte = endOfToDate;
+            }
         }
 
         const ticketRecords = await DeviceTicket
@@ -88,6 +94,8 @@ exports.getAllDeviceTickets = async (req, res) => {
         return res.status(500).send({ error: "Something broke" });
     }
 };
+
+
 
 exports.updateDeviceTicket = async (req, res) => {
     try {
