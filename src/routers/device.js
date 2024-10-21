@@ -13,4 +13,7 @@ router.delete("/deleteDevice/:deviceId", verifyJwtToken, ctrl.deleteDevice);
 //fetch Device Data
 router.get("/deviceData", verifyJwtToken, ctrl.getDeviceData);
 
+//fetch Device Count Data
+router.get("/device-counts",verifyJwtToken, ctrl.getDeviceCounts);
+
 module.exports = router

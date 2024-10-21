@@ -557,3 +557,63 @@ exports.getDeviceData = async (req, res) => {
     return res.status(500).json({ error: "Something went wrong" });
   }
 };
+
+exports.getDeviceCounts = async (req, res) => {
+  try {
+    const currentDate = new Date();
+    const lastMonthDate = new Date();
+    lastMonthDate.setMonth(currentDate.getMonth() - 1);
+
+    const totalDevices = await Device.countDocuments();
+
+    const activeDevices = await Device.countDocuments({ status: true });
+
+    const inactiveDevices = await Device.countDocuments({ status: false });
+
+    const lastMonthTotalDevices = await Device.countDocuments({
+      createdAt: { $gte: lastMonthDate },
+    });
+
+    const lastMonthActiveDevices = await Device.countDocuments({
+      status: true,
+      createdAt: { $gte: lastMonthDate },
+    });
+
+    const lastMonthInactiveDevices = await Device.countDocuments({
+      status: false,
+      createdAt: { $gte: lastMonthDate },
+    });
+
+    const totalChange =
+      lastMonthTotalDevices > 0
+        ? ((totalDevices - lastMonthTotalDevices) / lastMonthTotalDevices) * 100
+        : 0;
+
+    const activeChange =
+      lastMonthActiveDevices > 0
+        ? ((activeDevices - lastMonthActiveDevices) / lastMonthActiveDevices) * 100
+        : 0;
+
+    const inactiveChange =
+      lastMonthInactiveDevices > 0
+        ? ((inactiveDevices - lastMonthInactiveDevices) / lastMonthInactiveDevices) * 100
+        : 0;
+
+    return res.status(200).send({
+      data: {
+        totalDevices,
+        activeDevices,
+        inactiveDevices,
+        changes: {
+          totalChange: totalChange.toFixed(2),
+          activeChange: activeChange.toFixed(2),
+          inactiveChange: inactiveChange.toFixed(2),
+        },
+      },
+      message: "Device counts fetched successfully",
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send({ error: "Something broke" });
+  }
+};
