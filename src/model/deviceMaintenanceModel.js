@@ -23,6 +23,15 @@ const deviceMaintenanceSchema = new Schema({
         type: String,
         default: null
     },
+    engineerEmail: {
+        type: String,
+        validate: {
+            validator: function(v) {
+                return v === null || /^\S+@\S+\.\S+$/.test(v);
+            },
+            message: props => `${props.value} is not a valid email!`
+        }
+    },
     adminId: {
         type: mongoose.Schema.Types.ObjectId,
     }

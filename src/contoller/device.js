@@ -1,6 +1,19 @@
 const Device = require("../model/device");
 const Division = require("../model/division");
 const DeviceMaintenance = require("../model/deviceMaintenanceModel");
+const modelName = "IotCollection";
+const mongoose = require("mongoose");
+let DynamicModel;
+
+if (mongoose.models[modelName]) {
+  DynamicModel = mongoose.models[modelName];
+} else {
+  const dynamicSchema = new mongoose.Schema(
+    {},
+    { strict: false, timestamps: true }
+  );
+  DynamicModel = mongoose.model(modelName, dynamicSchema);
+}
 
 const {
   validateFields,
@@ -26,7 +39,7 @@ exports.createDevice = async (req, res) => {
       warningHotTemprature,
       warningWarmTemprature,
       warningDifferentialTemprature,
-      notifiedUsers
+      notifiedUsers,
     } = req.body;
 
     const missingFields = [];
@@ -43,13 +56,13 @@ exports.createDevice = async (req, res) => {
     if (!deployTime) missingFields.push("deployTime");
     if (!warningHotTemprature) missingFields.push("warningHotTemprature");
     if (!warningWarmTemprature) missingFields.push("warningWarmTemprature");
-    if (!warningDifferentialTemprature) missingFields.push("warningDifferentialTemprature");
+    if (!warningDifferentialTemprature)
+      missingFields.push("warningDifferentialTemprature");
     if (!notifiedUsers) missingFields.push("notifiedUsers");
-
 
     if (missingFields.length > 0) {
       return res.status(400).send({
-        error: `${missingFields.join(", ")}: fields are required.`
+        error: `${missingFields.join(", ")}: fields are required.`,
       });
     }
 
@@ -69,7 +82,7 @@ exports.createDevice = async (req, res) => {
       warningWarmTemprature,
       warningDifferentialTemprature,
       notifiedUsers,
-      adminId: admin
+      adminId: admin,
     };
 
     const device = await Device.create(data);
@@ -82,40 +95,38 @@ exports.createDevice = async (req, res) => {
 
     const maintenanceRecords = [];
 
-    for (let i = 0; i < maintainance; i++) {
+    for (let i = 0; i < 60; i++) {
       const maintenanceDate = new Date(selectDate);
       maintenanceDate.setMonth(selectDate.getMonth() + i);
 
       maintenanceRecords.push({
         deviceId: device._id,
-        status: 'Upcoming Maintenance',
+        status: "Upcoming Maintenance",
         maintainDate: maintenanceDate,
         engineerName: null,
+        engineerEmail: null,
         contactNumber: null,
-        adminId: admin
+        adminId: admin,
       });
     }
 
     await DeviceMaintenance.insertMany(maintenanceRecords);
 
-
-
-    return res.status(201).send({ data: device, message: "Device created successfully" });
+    return res
+      .status(201)
+      .send({ data: device, message: "Device created successfully" });
   } catch (error) {
-    if (error.name === 'ValidationError') {
+    if (error.name === "ValidationError") {
       return res.status(400).send({
-        error: Object.keys(error.errors).map(field =>
-          `${field}: ${error.errors[field].message}`
-        ).join(", ")
+        error: Object.keys(error.errors)
+          .map((field) => `${field}: ${error.errors[field].message}`)
+          .join(", "),
       });
     }
     console.error(error);
     return res.status(500).send({ error: "Something broke" });
   }
 };
-
-
-
 
 exports.updateDevice = async (req, res) => {
   try {
@@ -142,7 +153,7 @@ exports.updateDevice = async (req, res) => {
       warningHotTemprature,
       warningWarmTemprature,
       warningDifferentialTemprature,
-      notifiedUsers
+      notifiedUsers,
     } = req.body;
 
     if (deviceName) device.deviceName = deviceName;
@@ -153,12 +164,16 @@ exports.updateDevice = async (req, res) => {
     if (zone) device.zone = zone;
     if (status !== undefined) device.status = status;
     if (deployUserName) device.deployUserName = deployUserName;
-    if (deployUserContactNumber) device.deployUserContactNumber = deployUserContactNumber;
+    if (deployUserContactNumber)
+      device.deployUserContactNumber = deployUserContactNumber;
     if (deployDate) device.deployDate = deployDate;
     if (deployTime) device.deployTime = deployTime;
-    if (warningHotTemprature) device.warningHotTemprature = warningHotTemprature;
-    if (warningWarmTemprature) device.warningWarmTemprature = warningWarmTemprature;
-    if (warningDifferentialTemprature) device.warningDifferentialTemprature = warningDifferentialTemprature;
+    if (warningHotTemprature)
+      device.warningHotTemprature = warningHotTemprature;
+    if (warningWarmTemprature)
+      device.warningWarmTemprature = warningWarmTemprature;
+    if (warningDifferentialTemprature)
+      device.warningDifferentialTemprature = warningDifferentialTemprature;
 
     if (notifiedUsers !== undefined) {
       device.notifiedUsers = notifiedUsers;
@@ -167,20 +182,21 @@ exports.updateDevice = async (req, res) => {
     if (admin) device.adminId = admin;
 
     await device.save();
-    return res.status(200).send({ data: device, message: "Device updated successfully" });
+    return res
+      .status(200)
+      .send({ data: device, message: "Device updated successfully" });
   } catch (error) {
-    if (error.name === 'ValidationError') {
+    if (error.name === "ValidationError") {
       return res.status(400).send({
-        error: Object.keys(error.errors).map(field =>
-          `${field}: ${error.errors[field].message}`
-        ).join(", ")
+        error: Object.keys(error.errors)
+          .map((field) => `${field}: ${error.errors[field].message}`)
+          .join(", "),
       });
     }
     console.error(error);
     return res.status(500).send({ error: "Something broke" });
   }
 };
-
 
 exports.updateDeviceStatus = async (req, res) => {
   try {
@@ -197,13 +213,14 @@ exports.updateDeviceStatus = async (req, res) => {
     device.status = !device.status;
     await device.save();
 
-    return res.status(200).send({ data: device, message: "Status updated successfully" });
+    return res
+      .status(200)
+      .send({ data: device, message: "Status updated successfully" });
   } catch (error) {
     console.error(error);
     return res.status(500).send({ error: "Something broke" });
   }
 };
-
 
 exports.getDevice = async (req, res) => {
   try {
@@ -233,7 +250,7 @@ exports.getDevice = async (req, res) => {
     }
 
     if (statusFilter !== undefined && statusFilter !== "") {
-      searchQuery.status = statusFilter === 'true';
+      searchQuery.status = statusFilter === "true";
     }
 
     let page = parseInt(req.query.page);
@@ -278,7 +295,7 @@ exports.getDevice = async (req, res) => {
           model: "location",
           select: "_id locationName",
         })
-        .sort({ createdAt: -1 }) 
+        .sort({ createdAt: -1 })
         .skip(startIndex)
         .limit(limit);
 
@@ -317,8 +334,6 @@ exports.getDevice = async (req, res) => {
   }
 };
 
-
-
 exports.deleteDevice = async (req, res) => {
   try {
     const deviceId = req.params.deviceId;
@@ -333,10 +348,272 @@ exports.deleteDevice = async (req, res) => {
       return validateFound(res);
     }
 
-    return res.status(200).send({ data: device, message: "Device deleted successfully" });
+    return res
+      .status(200)
+      .send({ data: device, message: "Device deleted successfully" });
   } catch (error) {
     console.error(error);
     return res.status(500).send({ error: "Something broke" });
   }
 };
 
+exports.getDeviceData = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page);
+    const limit = parseInt(req.query.limit);
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const deviceName = req.query.deviceName;
+    const device = await Device.findOne({ deviceName })
+      .populate({
+        path: "location",
+        model: "location",
+        select: "_id locationName",
+      })
+      .populate({
+        path: "division",
+        model: "division",
+        select: "_id divisionName",
+      })
+      .populate({
+        path: "zone",
+        model: "zone",
+        select: "_id zoneName",
+      });
+
+    if (!device) {
+      return res.status(404).json({ message: "Device not found" });
+    }
+
+    const trainDataArray = await DynamicModel.find({ key: deviceName });
+    if (!trainDataArray.length) {
+      return res
+        .status(404)
+        .json({ message: "No train data found for this device" });
+    }
+
+    const trainMap = {};
+    const warningResults = {};
+    const formatTime = (time) => {
+      if (!time) return null;
+      const { hour, minute, second } = time;
+      return `${String(hour).padStart(2, "0")}:${String(minute).padStart(
+        2,
+        "0"
+      )}:${String(second).padStart(2, "0")}`;
+    };
+
+    const formatDate = (date) => {
+      if (!date) return null;
+      const { day, month, year } = date;
+      return `${String(day).padStart(2, "0")}/${String(month).padStart(
+        2,
+        "0"
+      )}/${year}`;
+    };
+
+    trainDataArray.forEach((train) => {
+      const { ID, temperature_arr, sensorStatusArr, SystemState, DT } = train;
+      const ambientTemperature =
+        Array.isArray(SystemState) && SystemState.length >= 5
+          ? SystemState[4]
+          : null;
+
+      const formattedDateTime = {
+        time: formatTime({
+          hour: DT?.[0]?.[0],
+          minute: DT?.[0]?.[1],
+          second: DT?.[0]?.[2],
+        }),
+        date: formatDate({
+          day: DT?.[1]?.[0],
+          month: DT?.[1]?.[1],
+          year: DT?.[1]?.[2],
+        }),
+      };
+
+      const axleData = temperature_arr?.[0] || [];
+      const axleDirection =
+        axleData.length >= 19 && axleData[17] > axleData[18] ? "Up" : "Down";
+
+      //warning counts for the train
+      if (!warningResults[ID]) {
+        warningResults[ID] = 0;
+      }
+
+      //warning counting
+      const warningHotTemp = parseFloat(device.warningHotTemprature);
+      const warningWarmTemp = parseFloat(device.warningWarmTemprature);
+      const warningDifferentialTemp = parseFloat(
+        device.warningDifferentialTemprature
+      );
+
+      const temperatureArr = train.temperature_arr;
+
+      temperatureArr.forEach((axleData) => {
+        const leftAxleSensors = axleData.slice(1, 5); // Left side axle sensors
+        const rightAxleSensors = axleData.slice(10, 14); // Right side axle sensors
+        const leftWheelTemps = axleData.slice(5, 7); // Left side wheel temps
+        const rightWheelTemps = axleData.slice(14, 16); // Right side wheel temps
+        const leftBrakeTemps = axleData.slice(7, 9); // Left side brake temps
+        const rightBrakeTemps = axleData.slice(16, 18); // Right side brake temps
+
+        // Check for left warnings
+        leftAxleSensors.forEach((temp) => {
+          if (temp >= warningDifferentialTemp) {
+            warningResults[ID]++;
+          }
+        });
+
+        rightAxleSensors.forEach((temp) => {
+          if (temp >= warningDifferentialTemp) {
+            warningResults[ID]++;
+          }
+        });
+
+        //for differential warnings for wheels and brakes
+        leftWheelTemps.forEach((temp) => {
+          if (temp >= warningDifferentialTemp) {
+            warningResults[ID]++;
+          }
+        });
+
+        rightWheelTemps.forEach((temp) => {
+          if (temp >= warningDifferentialTemp) {
+            warningResults[ID]++;
+          }
+        });
+
+        leftBrakeTemps.forEach((temp) => {
+          if (temp >= warningDifferentialTemp) {
+            warningResults[ID]++;
+          }
+        });
+
+        rightBrakeTemps.forEach((temp) => {
+          if (temp >= warningDifferentialTemp) {
+            warningResults[ID]++;
+          }
+        });
+      });
+
+      if (!trainMap[ID]) {
+        const totalAxles = temperature_arr.length;
+        const locomotiveAxles = 6;
+        const coachAxles = totalAxles - locomotiveAxles;
+        const totalCoaches = Math.floor(coachAxles / 4);
+
+        trainMap[ID] = {
+          trainID: ID,
+          totalAxles: totalAxles,
+          totalCoaches: totalCoaches,
+          ambientTemperature: ambientTemperature,
+          formattedDateTime: formattedDateTime,
+          direction: axleDirection,
+          warningCounts: warningResults[ID],
+        };
+      } else {
+        trainMap[ID].totalAxles += temperature_arr.length;
+        const locomotiveAxles = 6;
+        const coachAxles = trainMap[ID].totalAxles - locomotiveAxles;
+        trainMap[ID].totalCoaches = Math.floor(coachAxles / 4);
+        trainMap[ID].ambientTemperature = ambientTemperature;
+        trainMap[ID].formattedDateTime = formattedDateTime;
+        trainMap[ID].direction = axleDirection;
+        trainMap[ID].warningCounts = warningResults[ID];
+      }
+    });
+
+    const trainDetails = Object.values(trainMap).map((train) => ({
+      trainID: train.trainID,
+      totalAxles: train.totalAxles,
+      totalCoaches: train.totalCoaches,
+      ambientTemperature: train.ambientTemperature,
+      location: device.location.locationName,
+      division: device.division.divisionName,
+      zone: device.zone.zoneName,
+      formattedDateTime: train.formattedDateTime,
+      direction: train.direction,
+      warningCounts: train.warningCounts,
+    }));
+
+    const paginatedTrains =
+      limit > 0
+        ? trainDetails.slice(startIndex, startIndex + limit)
+        : trainDetails;
+    const totalCounts = trainDetails.length;
+
+    return res
+      .status(200)
+      .json({
+        deviceName,
+        trains: paginatedTrains,
+        totalCounts,
+        currentPage: page,
+        totalPages: Math.ceil(totalCounts / limit) || 1,
+      });
+  } catch (error) {
+    console.error("Error in getDeviceData:", error);
+    return res.status(500).json({ error: "Something went wrong" });
+  }
+};
+
+exports.getDeviceCounts = async (req, res) => {
+  try {
+    const currentDate = new Date();
+    const lastMonthDate = new Date();
+    lastMonthDate.setMonth(currentDate.getMonth() - 1);
+
+    const totalDevices = await Device.countDocuments();
+
+    const activeDevices = await Device.countDocuments({ status: true });
+
+    const inactiveDevices = await Device.countDocuments({ status: false });
+
+    const lastMonthTotalDevices = await Device.countDocuments({
+      createdAt: { $gte: lastMonthDate },
+    });
+
+    const lastMonthActiveDevices = await Device.countDocuments({
+      status: true,
+      createdAt: { $gte: lastMonthDate },
+    });
+
+    const lastMonthInactiveDevices = await Device.countDocuments({
+      status: false,
+      createdAt: { $gte: lastMonthDate },
+    });
+
+    const totalChange =
+      lastMonthTotalDevices > 0
+        ? ((totalDevices - lastMonthTotalDevices) / lastMonthTotalDevices) * 100
+        : 0;
+
+    const activeChange =
+      lastMonthActiveDevices > 0
+        ? ((activeDevices - lastMonthActiveDevices) / lastMonthActiveDevices) * 100
+        : 0;
+
+    const inactiveChange =
+      lastMonthInactiveDevices > 0
+        ? ((inactiveDevices - lastMonthInactiveDevices) / lastMonthInactiveDevices) * 100
+        : 0;
+
+    return res.status(200).send({
+      data: {
+        totalDevices,
+        activeDevices,
+        inactiveDevices,
+        changes: {
+          totalChange: totalChange.toFixed(2),
+          activeChange: activeChange.toFixed(2),
+          inactiveChange: inactiveChange.toFixed(2),
+        },
+      },
+      message: "Device counts fetched successfully",
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send({ error: "Something broke" });
+  }
+};

@@ -6,13 +6,13 @@ exports.createDeviceMaintenance = async (req, res) => {
         if (req.user.role !== "admin") {
             return res.status(403).send({ error: "Unauthorized to create" });
         }
-        const { deviceId, status, maintainDate, engineerName, contactNumber } = req.body;
+        const { deviceId, status, maintainDate, engineerName, contactNumber, engineerEmail } = req.body;
 
         if (!deviceId || !status) {
             return validateFields(res);
         }
 
-        const data = { deviceId, status, maintainDate, engineerName, contactNumber };
+        const data = { deviceId, status, maintainDate, engineerName, contactNumber, engineerEmail };
         const maintenanceRecord = await DeviceMaintenance.create(data);
 
         return res.status(201).send({ data: maintenanceRecord, message: "Device maintenance created successfully" });
@@ -88,11 +88,12 @@ exports.updateDeviceMaintenance = async (req, res) => {
             return validateFound(res);
         }
 
-        const { status, maintainDate, engineerName, contactNumber } = req.body;
+        const { status, maintainDate, engineerName, engineerEmail, contactNumber } = req.body;
         if (status) maintenanceRecord.status = status;
         if (maintainDate) maintenanceRecord.maintainDate = maintainDate;
         if (engineerName) maintenanceRecord.engineerName = engineerName;
         if (contactNumber) maintenanceRecord.contactNumber = contactNumber;
+        if (engineerEmail) maintenanceRecord.engineerEmail = engineerEmail;
 
         await maintenanceRecord.save();
         return res.status(200).send({ data: maintenanceRecord, message: "Device maintenance updated successfully" });
