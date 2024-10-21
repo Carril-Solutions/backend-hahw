@@ -198,6 +198,7 @@ exports.getIotData = async (req, res) => {
         date: date || "null/null/null",
       },
       deviceName: device.deviceName,
+      deviceId: device._id,
       location: device.location.locationName,
       division: device.division.divisionName,
       zone: device.zone.zoneName,
