@@ -12,6 +12,9 @@ router.delete("/deleteDevice/:deviceId", verifyJwtToken, ctrl.deleteDevice);
 
 //fetch Device Data
 router.get("/deviceData", verifyJwtToken, ctrl.getDeviceData);
+router.get("/allTrainData", verifyJwtToken, ctrl.getAllTrainData);
+router.get("/allDeviceWarningCount", verifyJwtToken, ctrl.getTotalWarningsByMonth);
+
 
 //fetch Device Count Data
 router.get("/device-counts",verifyJwtToken, ctrl.getDeviceCounts);

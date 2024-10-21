@@ -8,5 +8,6 @@ router.get("/deviceMaintenance", verifyJwtToken, ctrl.getAllDeviceMaintenance);
 router.put("/updateDeviceMaintenance/:maintenanceId", verifyJwtToken, ctrl.updateDeviceMaintenance);
 router.patch("/updateDeviceMaintenanceStatus/:maintenanceId", verifyJwtToken, ctrl.updateDeviceMaintenanceStatus);
 router.delete("/deleteDeviceMaintenance/:maintenanceId", verifyJwtToken, ctrl.deleteDeviceMaintenance);
+router.get('/upcoming-maintenance', verifyJwtToken, ctrl.getMaintenanceRecords);
 
 module.exports = router;

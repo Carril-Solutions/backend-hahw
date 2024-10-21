@@ -16,7 +16,6 @@ const deviceMaintenanceSchema = new Schema({
     },
     engineerName: {
         type: String,
-        minlength: [3, 'Engineer name must be at least 3 characters long'],
         default: null
     },
     contactNumber: {

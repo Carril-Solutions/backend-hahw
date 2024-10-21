@@ -3,6 +3,7 @@ const Division = require("../model/division");
 const DeviceMaintenance = require("../model/deviceMaintenanceModel");
 const modelName = "IotCollection";
 const mongoose = require("mongoose");
+const moment = require('moment');
 let DynamicModel;
 
 if (mongoose.models[modelName]) {
@@ -255,6 +256,8 @@ exports.getDevice = async (req, res) => {
 
     let page = parseInt(req.query.page);
     let limit = parseInt(req.query.limit);
+    console.log(limit);
+    
     let devices;
     const totalCount = await Device.countDocuments(searchQuery);
 
@@ -511,7 +514,7 @@ exports.getDeviceData = async (req, res) => {
           formattedDateTime: formattedDateTime,
           direction: axleDirection,
           warningCounts: warningResults[ID],
-        };
+        };                       
       } else {
         trainMap[ID].totalAxles += temperature_arr.length;
         const locomotiveAxles = 6;
@@ -554,6 +557,211 @@ exports.getDeviceData = async (req, res) => {
       });
   } catch (error) {
     console.error("Error in getDeviceData:", error);
+    return res.status(500).json({ error: "Something went wrong" });
+  }
+};
+
+exports.getAllTrainData = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; 
+    const limit = parseInt(req.query.limit) || 10; 
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+
+    const devices = await Device.find()
+      .populate({
+        path: "location",
+        model: "location",
+        select: "_id locationName",
+      })
+      .populate({
+        path: "division",
+        model: "division",
+        select: "_id divisionName",
+      })
+      .populate({
+        path: "zone",
+        model: "zone",
+        select: "_id zoneName",
+      });
+
+    if (!devices.length) {
+      return res.status(404).json({ message: "No devices found" });
+    }
+
+    const allTrainData = [];
+
+    for (const device of devices) {
+      const trainDataArray = await DynamicModel.find({ key: device.deviceName });
+
+      
+      if (!trainDataArray.length) {
+        continue;
+      }
+
+      const trainMap = {};
+      const warningResults = {};
+
+      const formatTime = (time) => {
+        if (!time) return null;
+        const { hour, minute, second } = time;
+        return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")}`;
+      };
+
+      const formatDate = (date) => {
+        if (!date) return null;
+        const { day, month, year } = date;
+        return `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
+      };
+
+      trainDataArray.forEach((train) => {
+        const { ID, temperature_arr, sensorStatusArr, SystemState, DT } = train;
+        const ambientTemperature = Array.isArray(SystemState) && SystemState.length >= 5 ? SystemState[4] : null;
+
+        const formattedDateTime = {
+          time: formatTime({ hour: DT?.[0]?.[0], minute: DT?.[0]?.[1], second: DT?.[0]?.[2] }),
+          date: formatDate({ day: DT?.[1]?.[0], month: DT?.[1]?.[1], year: DT?.[1]?.[2] }),
+        };
+
+        let timestamp = null;
+        if (Array.isArray(DT) && DT.length > 1) {
+          const day = DT[1][0];
+          const month = DT[1][1] - 1;
+          const year = DT[1][2];
+          const hour = DT[0][0];
+          const minute = DT[0][1];
+          const second = DT[0][2];
+
+          if (day !== undefined && month !== undefined && year !== undefined && hour !== undefined && minute !== undefined && second !== undefined) {
+            timestamp = new Date(year, month, day, hour, minute, second);
+          } else {
+            console.error(`Invalid DT components for train ID ${ID}:`, DT);
+          }
+        } else {
+          console.error(`DT is not valid for train ID ${ID}:`, DT);
+        }
+
+        const axleData = temperature_arr?.[0] || [];
+        const axleDirection = axleData.length >= 19 && axleData[17] > axleData[18] ? "Up" : "Down";
+
+        if (!warningResults[ID]) {
+          warningResults[ID] = 0;
+        }
+
+        const warningHotTemp = parseFloat(device.warningHotTemprature);
+        const warningWarmTemp = parseFloat(device.warningWarmTemprature);
+        const warningDifferentialTemp = parseFloat(device.warningDifferentialTemprature);
+
+        const temperatureArr = train.temperature_arr;
+
+        temperatureArr.forEach((axleData) => {
+          const leftAxleSensors = axleData.slice(1, 5);
+          const rightAxleSensors = axleData.slice(10, 14);
+          const leftWheelTemps = axleData.slice(5, 7);
+          const rightWheelTemps = axleData.slice(14, 16);
+          const leftBrakeTemps = axleData.slice(7, 9);
+          const rightBrakeTemps = axleData.slice(16, 18);
+
+          leftAxleSensors.forEach((temp) => {
+            if (temp >= warningDifferentialTemp) {
+              warningResults[ID]++;
+            }
+          });
+
+          rightAxleSensors.forEach((temp) => {
+            if (temp >= warningDifferentialTemp) {
+              warningResults[ID]++;
+            }
+          });
+
+          leftWheelTemps.forEach((temp) => {
+            if (temp >= warningDifferentialTemp) {
+              warningResults[ID]++;
+            }
+          });
+
+          rightWheelTemps.forEach((temp) => {
+            if (temp >= warningDifferentialTemp) {
+              warningResults[ID]++;
+            }
+          });
+
+          leftBrakeTemps.forEach((temp) => {
+            if (temp >= warningDifferentialTemp) {
+              warningResults[ID]++;
+            }
+          });
+
+          rightBrakeTemps.forEach((temp) => {
+            if (temp >= warningDifferentialTemp) {
+              warningResults[ID]++;
+            }
+          });
+        });
+
+        if (!trainMap[ID]) {
+          const totalAxles = temperature_arr.length;
+          const locomotiveAxles = 6;
+          const coachAxles = totalAxles - locomotiveAxles;
+          const totalCoaches = Math.floor(coachAxles / 4);
+
+          trainMap[ID] = {
+            trainID: ID,
+            totalAxles: totalAxles,
+            totalCoaches: totalCoaches,
+            ambientTemperature: ambientTemperature,
+            formattedDateTime: formattedDateTime,
+            direction: axleDirection,
+            warningCounts: warningResults[ID],
+            deviceName: device.deviceName,
+            timestamp: timestamp
+          };
+        } else {
+          trainMap[ID].totalAxles += temperature_arr.length;
+          const locomotiveAxles = 6;
+          const coachAxles = trainMap[ID].totalAxles - locomotiveAxles;
+          trainMap[ID].totalCoaches = Math.floor(coachAxles / 4);
+          trainMap[ID].ambientTemperature = ambientTemperature;
+          trainMap[ID].formattedDateTime = formattedDateTime;
+          trainMap[ID].direction = axleDirection;
+          trainMap[ID].warningCounts = warningResults[ID];
+        }
+      });
+
+      const trainDetails = Object.values(trainMap).map((train) => ({
+        trainID: train.trainID,
+        totalAxles: train.totalAxles,
+        totalCoaches: train.totalCoaches,
+        ambientTemperature: train.ambientTemperature,
+        location: device.location.locationName,
+        division: device.division.divisionName,
+        zone: device.zone.zoneName,
+        formattedDateTime: train.formattedDateTime,
+        direction: train.direction,
+        warningCounts: train.warningCounts,
+        deviceName: train.deviceName, 
+        timestamp: train.timestamp,
+      }));
+
+      allTrainData.push(...trainDetails);
+    }
+
+    allTrainData.sort((a, b) => {
+      return a.timestamp - b.timestamp;
+    });
+
+    const totalCounts = allTrainData.length;
+    const paginatedTrains =
+      limit > 0 ? allTrainData.slice(startIndex, startIndex + limit) : allTrainData;
+
+    return res.status(200).json({
+      trains: paginatedTrains,
+      totalCounts,
+      currentPage: page,
+      totalPages: Math.ceil(totalCounts / limit) || 1,
+    });
+  } catch (error) {
+    console.error("Error in getAllTrainData:", error);
     return res.status(500).json({ error: "Something went wrong" });
   }
 };
@@ -610,10 +818,78 @@ exports.getDeviceCounts = async (req, res) => {
           inactiveChange: inactiveChange.toFixed(2),
         },
       },
-      message: "Device counts fetched successfully",
+      message: "Device counts and percentage changes fetched successfully",
     });
   } catch (error) {
     console.error(error);
     return res.status(500).send({ error: "Something broke" });
+  }
+};
+
+exports.getTotalWarningsByMonth = async (req, res) => {
+  try {
+    const currentYear = moment().year();
+    
+    const totalWarningsByMonth = Array(12).fill(0);
+
+    const devices = await Device.find();
+
+    for (const device of devices) {
+      const trainDataArray = await DynamicModel.find({ key: device.deviceName });
+
+      for (const train of trainDataArray) {
+        const { DT } = train;
+
+        if (Array.isArray(DT) && DT.length > 1) {
+          const trainYear = DT[1][2];
+
+          const month = DT[1][1];
+
+          if (trainYear === currentYear) {
+            const warningDifferentialTemp = parseFloat(device.warningDifferentialTemprature);
+            let warningCount = 0;
+
+            const temperatureArr = train.temperature_arr;
+
+            temperatureArr.forEach((axleData) => {
+              const leftAxleSensors = axleData.slice(1, 5);
+              const rightAxleSensors = axleData.slice(10, 14);
+              const leftWheelTemps = axleData.slice(5, 7);
+              const rightWheelTemps = axleData.slice(14, 16);
+              const leftBrakeTemps = axleData.slice(7, 9);
+              const rightBrakeTemps = axleData.slice(16, 18);
+
+              [leftAxleSensors, rightAxleSensors, leftWheelTemps, rightWheelTemps, leftBrakeTemps, rightBrakeTemps].forEach(sensorArray => {
+                sensorArray.forEach((temp) => {
+                  if (temp >= warningDifferentialTemp) {
+                    warningCount++;
+                  }
+                });
+              });
+            });
+
+            totalWarningsByMonth[month - 1] += warningCount;
+          }
+        }
+      }
+    }
+
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    const response = {};
+    monthNames.forEach((month, index) => {
+      response[month] = totalWarningsByMonth[index];
+    });
+
+    return res.status(200).json({
+      message: "Total warnings for the current year retrieved successfully.",
+      data: response,
+    });
+  } catch (error) {
+    console.error("Error in getTotalWarningsByMonth:", error);
+    return res.status(500).json({ error: "Something went wrong" });
   }
 };
