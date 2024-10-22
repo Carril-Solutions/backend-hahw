@@ -88,31 +88,6 @@ exports.createDevice = async (req, res) => {
 
     const device = await Device.create(data);
 
-    const selectDate = new Date(req.body.deployDate);
-
-    if (isNaN(selectDate)) {
-      return res.status(400).send({ error: "Invalid deployDate format." });
-    }
-
-    const maintenanceRecords = [];
-
-    for (let i = 0; i < 60; i++) {
-      const maintenanceDate = new Date(selectDate);
-      maintenanceDate.setMonth(selectDate.getMonth() + i);
-
-      maintenanceRecords.push({
-        deviceId: device._id,
-        status: "Upcoming Maintenance",
-        maintainDate: maintenanceDate,
-        engineerName: null,
-        engineerEmail: null,
-        contactNumber: null,
-        adminId: admin,
-      });
-    }
-
-    await DeviceMaintenance.insertMany(maintenanceRecords);
-
     return res
       .status(201)
       .send({ data: device, message: "Device created successfully" });
@@ -769,43 +744,49 @@ exports.getAllTrainData = async (req, res) => {
 exports.getDeviceCounts = async (req, res) => {
   try {
     const currentDate = new Date();
-    const lastMonthDate = new Date();
-    lastMonthDate.setMonth(currentDate.getMonth() - 1);
+    const firstDayOfCurrentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    const lastMonthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+    const firstDayOfLastMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
 
     const totalDevices = await Device.countDocuments();
-
     const activeDevices = await Device.countDocuments({ status: true });
-
     const inactiveDevices = await Device.countDocuments({ status: false });
 
-    const lastMonthTotalDevices = await Device.countDocuments({
-      createdAt: { $gte: lastMonthDate },
+    const currentMonthTotalDevices = await Device.countDocuments({
+      createdAt: { $gte: firstDayOfCurrentMonth },
+    });
+    const currentMonthActiveDevices = await Device.countDocuments({
+      status: true,
+      createdAt: { $gte: firstDayOfCurrentMonth },
+    });
+    const currentMonthInactiveDevices = await Device.countDocuments({
+      status: false,
+      createdAt: { $gte: firstDayOfCurrentMonth },
     });
 
+    const lastMonthTotalDevices = await Device.countDocuments({
+      createdAt: { $gte: firstDayOfLastMonth, $lt: firstDayOfCurrentMonth },
+    });
     const lastMonthActiveDevices = await Device.countDocuments({
       status: true,
-      createdAt: { $gte: lastMonthDate },
+      createdAt: { $gte: firstDayOfLastMonth, $lt: firstDayOfCurrentMonth },
     });
-
     const lastMonthInactiveDevices = await Device.countDocuments({
       status: false,
-      createdAt: { $gte: lastMonthDate },
+      createdAt: { $gte: firstDayOfLastMonth, $lt: firstDayOfCurrentMonth },
     });
 
-    const totalChange =
-      lastMonthTotalDevices > 0
-        ? ((totalDevices - lastMonthTotalDevices) / lastMonthTotalDevices) * 100
-        : 0;
+    const calculatePercentageChange = (current, previous) => {
+      console.log(current,previous);
+      
+      if (previous === 0) return { percentage: current > 0 ? 100 : 0, direction: current >= 0 ? "up" : "down" };
+      const change = ((current - previous) / previous);
+      return { percentage: Math.abs(change.toFixed(2)), direction: change >= 0 ? "up" : "down" };
+    };
 
-    const activeChange =
-      lastMonthActiveDevices > 0
-        ? ((activeDevices - lastMonthActiveDevices) / lastMonthActiveDevices) * 100
-        : 0;
-
-    const inactiveChange =
-      lastMonthInactiveDevices > 0
-        ? ((inactiveDevices - lastMonthInactiveDevices) / lastMonthInactiveDevices) * 100
-        : 0;
+    const totalChange = calculatePercentageChange(currentMonthTotalDevices, lastMonthTotalDevices);
+    const activeChange = calculatePercentageChange(currentMonthActiveDevices, lastMonthActiveDevices);
+    const inactiveChange = calculatePercentageChange(currentMonthInactiveDevices, lastMonthInactiveDevices);
 
     return res.status(200).send({
       data: {
@@ -813,9 +794,18 @@ exports.getDeviceCounts = async (req, res) => {
         activeDevices,
         inactiveDevices,
         changes: {
-          totalChange: totalChange.toFixed(2),
-          activeChange: activeChange.toFixed(2),
-          inactiveChange: inactiveChange.toFixed(2),
+          totalChange: {
+            percentage: totalChange.percentage,
+            direction: totalChange.direction,
+          },
+          activeChange: {
+            percentage: activeChange.percentage,
+            direction: activeChange.direction,
+          },
+          inactiveChange: {
+            percentage: inactiveChange.percentage,
+            direction: inactiveChange.direction,
+          },
         },
       },
       message: "Device counts and percentage changes fetched successfully",

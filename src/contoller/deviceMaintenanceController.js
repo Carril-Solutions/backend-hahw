@@ -55,7 +55,7 @@ exports.getAllDeviceMaintenance = async (req, res) => {
             filter.status = status;
         }
 
-        const maintenanceRecords = await DeviceMaintenance.find(filter).sort({ createdAt: -1 });
+        const maintenanceRecords = await DeviceMaintenance.find(filter).sort({ maintainDate: -1 });
 
         return res.status(200).send({
             message: "Device maintenance records fetched successfully",
@@ -218,58 +218,53 @@ exports.getMaintenanceRecords = async (req, res) => {
     }
   };
 
-  cron.schedule('* * * * *', async () => {
+cron.schedule('* * * * *', async () => {
     try {
         const today = new Date();
         const twentyOneDaysAgo = new Date(today.getTime() - 21 * 24 * 60 * 60 * 1000);
 
-        const upcomingMaintenanceRecords = await DeviceMaintenance.find({
+        const pastUpcomingMaintenance = await DeviceMaintenance.find({
             status: 'Upcoming Maintenance',
             maintainDate: { $lt: today }
         });
 
-        for (const record of upcomingMaintenanceRecords) {
+        for (const record of pastUpcomingMaintenance) {
             if (record.maintainDate < twentyOneDaysAgo) {
                 record.status = 'Maintenance Not Done';
                 await record.save();
-                console.log(`Record updated to 'Maintenance Not Done' for device ID: ${record.deviceId}`);
             }
         }
+
         const devices = await Device.find({ status: true });
 
         for (const device of devices) {
             const deployDate = new Date(device.deployDate);
 
-            // Ensure we only process devices that have been deployed
             if (deployDate <= today) {
-                // Check for existing upcoming maintenance entries from today onward
                 const existingUpcoming = await DeviceMaintenance.findOne({
                     deviceId: device._id,
                     status: 'Upcoming Maintenance',
-                    maintainDate: { $gte: today } // Current date and future
+                    maintainDate: { $gte: today }
                 });
 
                 if (existingUpcoming) {
                     console.log(`Existing upcoming maintenance found for device ID: ${device._id}. No new entry created.`);
-                    continue; // Skip to the next device
+                    continue;
                 }
 
-                // Find the latest upcoming maintenance entry if no existing found
-                const latestUpcoming = await DeviceMaintenance.findOne({
+                const latestPastUpcoming = await DeviceMaintenance.findOne({
                     deviceId: device._id,
                     status: 'Upcoming Maintenance',
-                    maintainDate: { $lt: today } // Past upcoming maintenance
-                }).sort({ maintainDate: -1 }); // Sort by maintainDate descending
+                    maintainDate: { $lt: today }
+                }).sort({ maintainDate: -1 });
 
                 let newMaintainDate;
-
-                if (latestUpcoming) {
-                    // Calculate the new maintenance date, one month after the latest
-                    newMaintainDate = new Date(latestUpcoming.maintainDate);
+                
+                if (latestPastUpcoming) {
+                    newMaintainDate = new Date(latestPastUpcoming.maintainDate);
                     newMaintainDate.setMonth(newMaintainDate.getMonth() + 1);
                 } else {
-                    // If no past records exist, create a new entry based on the deploy date
-                    newMaintainDate = new Date(deployDate.getTime() + (30 * 24 * 60 * 60 * 1000)); // 30 days from deploy date
+                    newMaintainDate = new Date(deployDate.getTime() + (30 * 24 * 60 * 60 * 1000));
                 }
 
                 const existingWithSameDate = await DeviceMaintenance.findOne({
@@ -288,12 +283,13 @@ exports.getMaintenanceRecords = async (req, res) => {
                     };
 
                     await DeviceMaintenance.create(newMaintenanceData);
-                    console.log(`New maintenance entry created for device ID: ${device._id} for maintain date: ${newMaintainDate}`);
+                    console.log(`New maintenance entry created for device ID: ${device._id} with maintain date: ${newMaintainDate}`);
                 } else {
                     console.log(`An entry with the same maintain date already exists for device ID: ${device._id}. No new entry created.`);
                 }
             }
         }
+
     } catch (error) {
         console.error("Error checking and creating maintenance records:", error);
     }
