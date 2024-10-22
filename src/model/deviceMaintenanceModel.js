@@ -3,6 +3,7 @@ const { default: mongoose, Schema } = require("mongoose");
 const deviceMaintenanceSchema = new Schema({
     deviceId: {
         type: mongoose.Schema.Types.ObjectId,
+        ref: 'device',
         required: true,
     },
     status: {

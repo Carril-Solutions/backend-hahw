@@ -9,4 +9,7 @@ router.put("/updateDeviceTicket/:ticketId", verifyJwtToken, ctrl.updateDeviceTic
 router.patch("/updateDeviceTicketStatus/:ticketId", verifyJwtToken, ctrl.updateDeviceTicketStatus);
 router.delete("/deleteDeviceTicket/:ticketId", verifyJwtToken, ctrl.deleteDeviceTicket);
 
+router.get('/device-tickets-alert', verifyJwtToken, ctrl.getLatestDeviceTicket);
+
+
 module.exports = router;

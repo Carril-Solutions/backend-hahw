@@ -201,3 +201,54 @@ exports.deleteDeviceTicket = async (req, res) => {
         return res.status(500).send({ error: "Something broke" });
     }
 };
+
+exports.getLatestDeviceTicket = async (req, res) => {
+    try {
+        if (req.user.role !== "admin") {
+            return res.status(403).send({ error: "Unauthorized to view" });
+        }
+
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const startIndex = (page - 1) * limit;
+        const endIndex = page * limit;
+
+        const latestTickets = await DeviceTicket
+            .find()
+            .sort({ createdAt: -1 })
+            .populate({
+                path: "deviceId",
+                model: "device",
+                select: "_id deviceName",
+            })
+            .populate({
+                path: "location",
+                model: "location",
+                select: "_id locationName",
+            })
+            .populate({
+                path: "sensor",
+                model: "issuecode",
+                select: "_id componentName",
+            })
+            .skip(startIndex)
+            .limit(limit);
+
+        const totalCounts = await DeviceTicket.countDocuments();
+
+        if (latestTickets.length === 0) {
+            return res.status(404).send({ error: "No device tickets found" });
+        }
+
+        return res.status(200).send({
+            message: "Latest device tickets fetched successfully",
+            data: latestTickets,
+            currentPage: page,
+            totalCounts,
+            totalPages: Math.ceil(totalCounts / limit) || 1,
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send({ error: "Something broke" });
+    }
+};

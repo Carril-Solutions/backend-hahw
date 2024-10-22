@@ -24,6 +24,7 @@ const deviceSchema = new Schema({
     },
     location: {
         type: mongoose.Schema.Types.ObjectId,
+        ref:'location'
     },
     division: {
         type: mongoose.Schema.Types.ObjectId,
