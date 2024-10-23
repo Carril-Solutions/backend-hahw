@@ -809,10 +809,12 @@ exports.getDeviceCounts = async (req, res) => {
 exports.getTotalWarningsByMonth = async (req, res) => {
   try {
     const currentYear = moment().year();
-
     const totalWarningsByMonth = Array(12).fill(0);
-
-    const devices = await Device.find();
+    
+    const deviceNameQuery = req.query.deviceName;
+    
+    const query = deviceNameQuery ? { deviceName: deviceNameQuery } : {};
+    const devices = await Device.find(query);
 
     for (const device of devices) {
       const trainDataArray = await DynamicModel.find({
@@ -824,15 +826,11 @@ exports.getTotalWarningsByMonth = async (req, res) => {
 
         if (Array.isArray(DT) && DT.length > 1) {
           const trainYear = DT[1][2];
-
           const month = DT[1][1];
 
           if (trainYear === currentYear) {
-            const warningDifferentialTemp = parseFloat(
-              device.warningDifferentialTemprature
-            );
+            const warningDifferentialTemp = parseFloat(device.warningDifferentialTemprature);
             let warningCount = 0;
-
             const temperatureArr = train.temperature_arr;
 
             temperatureArr.forEach((axleData) => {
@@ -866,18 +864,8 @@ exports.getTotalWarningsByMonth = async (req, res) => {
     }
 
     const monthNames = [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December",
     ];
 
     const response = {};
