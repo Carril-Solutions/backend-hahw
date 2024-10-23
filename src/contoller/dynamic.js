@@ -185,7 +185,7 @@ exports.getIotData = async (req, res) => {
       }
       return acc;
     }, []);
-    
+
     const finalResponse = {
       id: rawDatass[0]._id,
       key: rawDatass[0].key,
@@ -213,11 +213,58 @@ exports.getIotData = async (req, res) => {
 
 exports.getDeviceWarnings = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.query.page);
+    const limit = parseInt(req.query.limit);
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
     const deviceName = req.query.deviceName || null;
+    let warningStatus = req.query.warningStatus || null;
+
+    // Extract period, startDate, and endDate from query
+    const { period, startDate, endDate } = req.query;
+    let dateFilter = {};
+    let days = 0;
+
+    // Determine the date filter based on period or custom dates
+    if (period) {
+      if (period === "7") days = 7;
+      else if (period === "15") days = 15;
+      else if (period === "30") days = 30;
+    }
+
+    if (days > 0 || (period === "custom" && startDate && endDate)) {
+      let calculatedStartDate, calculatedEndDate;
+
+      if (days > 0) {
+        calculatedEndDate = new Date();
+        calculatedStartDate = new Date(calculatedEndDate);
+        calculatedStartDate.setDate(calculatedStartDate.getDate() - days);
+      } else if (period === "custom") {
+        calculatedStartDate = new Date(startDate);
+        calculatedEndDate = new Date(endDate);
+        calculatedEndDate.setHours(23, 59, 59, 999);
+
+        // Validate custom date input
+        if (
+          isNaN(calculatedStartDate.getTime()) ||
+          isNaN(calculatedEndDate.getTime())
+        ) {
+          return res.status(400).send({ error: "Invalid date format" });
+        }
+
+        days = Math.ceil(
+          (calculatedEndDate - calculatedStartDate) / (1000 * 60 * 60 * 24)
+        );
+      }
+
+      // Apply date filter
+      dateFilter = {
+        createdAt: {
+          $gte: calculatedStartDate,
+          $lte: calculatedEndDate,
+        },
+      };
+    }
 
     const deviceQuery = deviceName ? { deviceName } : {};
     const devices = await DeviceModel.find(deviceQuery)
@@ -244,7 +291,11 @@ exports.getDeviceWarnings = async (req, res) => {
     let allWarningResults = [];
 
     for (const device of devices) {
-      const warnings = await DynamicModel.find({ key: device.deviceName });
+      // Combine device name and date filter
+      const warnings = await DynamicModel.find({
+        key: device.deviceName,
+        ...dateFilter,
+      });
       const warningHotTemp = parseFloat(device.warningHotTemprature);
       const warningWarmTemp = parseFloat(device.warningWarmTemprature);
       const warningDifferentialTemp = parseFloat(
@@ -305,7 +356,8 @@ exports.getDeviceWarnings = async (req, res) => {
         temperatureArr.forEach((axleData) => {
           const axleNo = axleData[0];
           axleCount++;
-          let coachNo = axleCount <= 6 ? "Loco" : Math.ceil((axleCount - 6) / 4);
+          let coachNo =
+            axleCount <= 6 ? "Loco" : Math.ceil((axleCount - 6) / 4);
 
           const leftAxleSensors = axleData.slice(1, 5);
           const rightAxleSensors = axleData.slice(10, 14);
@@ -428,92 +480,100 @@ exports.getDeviceWarnings = async (req, res) => {
             }
           });
 
-        // Differential warnings for wheels and brakes
-        leftWheelTemps.forEach((temp, index) => {
-          if (temp >= warningDifferentialTemp) {
-            warningResults.push({
-              warning_Type: "Wheel",
-              sensorNo: `${index + 1}`,
-              temp,
-              status: "Differential",
-              side: "Left",
-              axleNo: axleNo,
-              trainNo,
-              coachNo,
-              direction: axleDirection,
-              device_Name: device.deviceName,
-              location: device.location.locationName,
-              division: device.division.divisionName,
-              zone: device.zone.zoneName,
-              Date_Time: formattedDateTime,
-            });
-          }
-        });
+          // Differential warnings for wheels and brakes
+          leftWheelTemps.forEach((temp, index) => {
+            if (temp >= warningDifferentialTemp) {
+              warningResults.push({
+                warning_Type: "Wheel",
+                sensorNo: `${index + 1}`,
+                temp,
+                status: "Differential",
+                side: "Left",
+                axleNo: axleNo,
+                trainNo,
+                coachNo,
+                direction: axleDirection,
+                device_Name: device.deviceName,
+                location: device.location.locationName,
+                division: device.division.divisionName,
+                zone: device.zone.zoneName,
+                Date_Time: formattedDateTime,
+              });
+            }
+          });
 
-        rightWheelTemps.forEach((temp, index) => {
-          if (temp >= warningDifferentialTemp) {
-            warningResults.push({
-              warning_Type: "Wheel",
-              sensorNo: `${index + 1}`,
-              temp,
-              status: "Differential",
-              side: "Right",
-              axleNo: axleNo,
-              trainNo,
-              coachNo,
-              direction: axleDirection,
-              device_Name: device.deviceName,
-              location: device.location.locationName,
-              division: device.division.divisionName,
-              zone: device.zone.zoneName,
-              Date_Time: formattedDateTime,
-            });
-          }
-        });
+          rightWheelTemps.forEach((temp, index) => {
+            if (temp >= warningDifferentialTemp) {
+              warningResults.push({
+                warning_Type: "Wheel",
+                sensorNo: `${index + 1}`,
+                temp,
+                status: "Differential",
+                side: "Right",
+                axleNo: axleNo,
+                trainNo,
+                coachNo,
+                direction: axleDirection,
+                device_Name: device.deviceName,
+                location: device.location.locationName,
+                division: device.division.divisionName,
+                zone: device.zone.zoneName,
+                Date_Time: formattedDateTime,
+              });
+            }
+          });
 
-        leftBrakeTemps.forEach((temp, index) => {
-          if (temp >= warningDifferentialTemp) {
-            warningResults.push({
-              warning_Type: "Brake",
-              sensorNo: `${index + 1}`,
-              temp,
-              status: "Differential",
-              side: "Left",
-              axleNo: axleNo,
-              trainNo,
-              coachNo,
-              direction: axleDirection,
-              device_Name: device.deviceName,
-              location: device.location.locationName,
-              division: device.division.divisionName,
-              zone: device.zone.zoneName,
-              Date_Time: formattedDateTime,
-            });
-          }
-        });
+          leftBrakeTemps.forEach((temp, index) => {
+            if (temp >= warningDifferentialTemp) {
+              warningResults.push({
+                warning_Type: "Brake",
+                sensorNo: `${index + 1}`,
+                temp,
+                status: "Differential",
+                side: "Left",
+                axleNo: axleNo,
+                trainNo,
+                coachNo,
+                direction: axleDirection,
+                device_Name: device.deviceName,
+                location: device.location.locationName,
+                division: device.division.divisionName,
+                zone: device.zone.zoneName,
+                Date_Time: formattedDateTime,
+              });
+            }
+          });
 
-        rightBrakeTemps.forEach((temp, index) => {
-          if (temp >= warningDifferentialTemp) {
-            warningResults.push({
-              warning_Type: "Brake",
-              sensorNo: `${index + 1}`,
-              temp,
-              status: "Differential",
-              side: "Right",
-              axleNo: axleNo,
-              trainNo,
-              coachNo,
-              direction: axleDirection,
-              device_Name: device.deviceName,
-              location: device.location.locationName,
-              division: device.division.divisionName,
-              zone: device.zone.zoneName,
-              Date_Time: formattedDateTime,
-            });
-          }
+          rightBrakeTemps.forEach((temp, index) => {
+            if (temp >= warningDifferentialTemp) {
+              warningResults.push({
+                warning_Type: "Brake",
+                sensorNo: `${index + 1}`,
+                temp,
+                status: "Differential",
+                side: "Right",
+                axleNo: axleNo,
+                trainNo,
+                coachNo,
+                direction: axleDirection,
+                device_Name: device.deviceName,
+                location: device.location.locationName,
+                division: device.division.divisionName,
+                zone: device.zone.zoneName,
+                Date_Time: formattedDateTime,
+              });
+            }
+          });
         });
       });
-    });
+
+      if (warningStatus) {
+        warningResults = warningResults.filter(
+          (warning) =>
+            warning.status.toLowerCase() === warningStatus.toLowerCase()
+        );
+      }
+
       allWarningResults = [...allWarningResults, ...warningResults];
     }
 
