@@ -342,6 +342,52 @@ exports.getDeviceData = async (req, res) => {
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
     const deviceName = req.query.deviceName;
+
+    // Extract period, startDate, and endDate from query
+    const { period, startDate, endDate } = req.query;
+    let dateFilter = {};
+    let days = 0;
+
+    // Determine the date filter based on period or custom dates
+    if (period) {
+      if (period === "7") days = 7;
+      else if (period === "15") days = 15;
+      else if (period === "30") days = 30;
+    }
+
+    if (days > 0 || (period === "custom" && startDate && endDate)) {
+      let calculatedStartDate, calculatedEndDate;
+
+      if (days > 0) {
+        calculatedEndDate = new Date();
+        calculatedStartDate = new Date(calculatedEndDate);
+        calculatedStartDate.setDate(calculatedStartDate.getDate() - days);
+      } else if (period === "custom") {
+        calculatedStartDate = new Date(startDate);
+        calculatedEndDate = new Date(endDate);
+        calculatedEndDate.setHours(23, 59, 59, 999);
+
+        // Validate custom date input
+        if (
+          isNaN(calculatedStartDate.getTime()) ||
+          isNaN(calculatedEndDate.getTime())
+        ) {
+          return res.status(400).send({ error: "Invalid date format" });
+        }
+
+        days = Math.ceil(
+          (calculatedEndDate - calculatedStartDate) / (1000 * 60 * 60 * 24)
+        );
+      }
+
+      // Apply date filter
+      dateFilter = {
+        createdAt: {
+          $gte: calculatedStartDate,
+          $lte: calculatedEndDate,
+        },
+      };
+    }
     const device = await Device.findOne({ deviceName })
       .populate({
         path: "location",
@@ -363,7 +409,10 @@ exports.getDeviceData = async (req, res) => {
       return res.status(404).json({ message: "Device not found" });
     }
 
-    const trainDataArray = await DynamicModel.find({ key: deviceName });
+    const trainDataArray = await DynamicModel.find({
+      key: deviceName,
+      ...dateFilter,
+    });
     if (!trainDataArray.length) {
       return res
         .status(404)
@@ -579,45 +628,66 @@ exports.getAllTrainData = async (req, res) => {
       const formatTime = (time) => {
         if (!time) return null;
         const { hour, minute, second } = time;
-        return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")}`;
+        return `${String(hour).padStart(2, "0")}:${String(minute).padStart(
+          2,
+          "0"
+        )}:${String(second).padStart(2, "0")}`;
       };
 
       const formatDate = (date) => {
         if (!date) return null;
         const { day, month, year } = date;
-        return `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
+        return `${String(day).padStart(2, "0")}/${String(month).padStart(
+          2,
+          "0"
+        )}/${year}`;
       };
 
       trainDataArray.forEach((train) => {
         const { ID, temperature_arr, sensorStatusArr, SystemState, DT } = train;
-        
+
         const ambientTemperature =
           Array.isArray(SystemState) && SystemState.length >= 5
             ? SystemState[4]
             : null;
 
-            const formattedDateTime = {
-              time: formatTime({ hour: DT?.[0]?.[0], minute: DT?.[0]?.[1], second: DT?.[0]?.[2] }),
-              date: formatDate({ day: DT?.[1]?.[0], month: DT?.[1]?.[1], year: DT?.[1]?.[2] }),
-            };
-    
-            let timestamp = null;
-            if (Array.isArray(DT) && DT.length > 1) {
-              const day = DT[1][0];
-              const month = DT[1][1] - 1;
-              const year = DT[1][2];
-              const hour = DT[0][0];
-              const minute = DT[0][1];
-              const second = DT[0][2];
-    
-              if (day !== undefined && month !== undefined && year !== undefined && hour !== undefined && minute !== undefined && second !== undefined) {
-                timestamp = new Date(year, month, day, hour, minute, second);
-              } else {
-                console.error(`Invalid DT components for train ID ${ID}:`, DT);
-              }
-            } else {
-              console.error(`DT is not valid for train ID ${ID}:`, DT);
-            }
+        const formattedDateTime = {
+          time: formatTime({
+            hour: DT?.[0]?.[0],
+            minute: DT?.[0]?.[1],
+            second: DT?.[0]?.[2],
+          }),
+          date: formatDate({
+            day: DT?.[1]?.[0],
+            month: DT?.[1]?.[1],
+            year: DT?.[1]?.[2],
+          }),
+        };
+
+        let timestamp = null;
+        if (Array.isArray(DT) && DT.length > 1) {
+          const day = DT[1][0];
+          const month = DT[1][1] - 1;
+          const year = DT[1][2];
+          const hour = DT[0][0];
+          const minute = DT[0][1];
+          const second = DT[0][2];
+
+          if (
+            day !== undefined &&
+            month !== undefined &&
+            year !== undefined &&
+            hour !== undefined &&
+            minute !== undefined &&
+            second !== undefined
+          ) {
+            timestamp = new Date(year, month, day, hour, minute, second);
+          } else {
+            console.error(`Invalid DT components for train ID ${ID}:`, DT);
+          }
+        } else {
+          console.error(`DT is not valid for train ID ${ID}:`, DT);
+        }
 
         let maxRightTemp = null;
         let maxLeftTemp = null;
@@ -810,9 +880,9 @@ exports.getTotalWarningsByMonth = async (req, res) => {
   try {
     const currentYear = moment().year();
     const totalWarningsByMonth = Array(12).fill(0);
-    
+
     const deviceNameQuery = req.query.deviceName;
-    
+
     const query = deviceNameQuery ? { deviceName: deviceNameQuery } : {};
     const devices = await Device.find(query);
 
@@ -829,7 +899,9 @@ exports.getTotalWarningsByMonth = async (req, res) => {
           const month = DT[1][1];
 
           if (trainYear === currentYear) {
-            const warningDifferentialTemp = parseFloat(device.warningDifferentialTemprature);
+            const warningDifferentialTemp = parseFloat(
+              device.warningDifferentialTemprature
+            );
             let warningCount = 0;
             const temperatureArr = train.temperature_arr;
 
@@ -864,8 +936,18 @@ exports.getTotalWarningsByMonth = async (req, res) => {
     }
 
     const monthNames = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December",
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
     ];
 
     const response = {};
