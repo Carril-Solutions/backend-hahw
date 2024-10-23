@@ -121,6 +121,7 @@ exports.updateDeviceMaintenance = async (req, res) => {
     if (engineerName) maintenanceRecord.engineerName = engineerName;
     if (contactNumber) maintenanceRecord.contactNumber = contactNumber;
     if (engineerEmail) maintenanceRecord.engineerEmail = engineerEmail;
+    maintenanceRecord.isContactAdded = true
 
     await maintenanceRecord.save();
     return res
@@ -366,9 +367,10 @@ cron.schedule("* * * * *", async () => {
             deviceId: device._id,
             status: "Upcoming Maintenance",
             maintainDate: newMaintainDate,
+            isContactAdded: false,
             engineerName: null,
             contactNumber: null,
-            engineerEmail: null,
+            engineerEmail: null
           };
 
           await DeviceMaintenance.create(newMaintenanceData);

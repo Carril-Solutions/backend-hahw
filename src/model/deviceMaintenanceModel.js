@@ -32,6 +32,10 @@ const deviceMaintenanceSchema = new Schema({
             message: props => `${props.value} is not a valid email!`
         }
     },
+    isContactAdded: {
+        type: Boolean,
+        default: false
+    },
     adminId: {
         type: mongoose.Schema.Types.ObjectId,
     }

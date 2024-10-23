@@ -1,6 +1,8 @@
 const Device = require("../model/device");
 const Division = require("../model/division");
 const DeviceMaintenance = require("../model/deviceMaintenanceModel");
+const DeviceTicket = require("../model/deviceTicketModel");
+const IssueCode = require("../model/issueCode");
 const modelName = "IotCollection";
 const mongoose = require("mongoose");
 const moment = require("moment");
@@ -961,6 +963,142 @@ exports.getTotalWarningsByMonth = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in getTotalWarningsByMonth:", error);
+    return res.status(500).json({ error: "Something went wrong" });
+  }
+};
+
+exports.getAlertData = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const deviceName = req.query.deviceName;
+
+    const device = await Device.findOne({ deviceName })
+      .populate({
+        path: "location",
+        model: "location",
+        select: "_id locationName",
+      })
+      .populate({
+        path: "division",
+        model: "division",
+        select: "_id divisionName",
+      })
+      .populate({
+        path: "zone",
+        model: "zone",
+        select: "_id zoneName",
+      });
+
+    if (!device) {
+      return res.status(404).json({ message: "Device not found" });
+    }
+
+    const trainDataArray = await DynamicModel.find({ key: deviceName });
+    if (!trainDataArray.length) {
+      return res
+        .status(404)
+        .json({ message: "No train data found for this device" });
+    }
+
+    const alertResults = [];
+
+    const formatTime = (time) => {
+      if (!time) return null;
+      const { hour, minute, second } = time;
+      return `${String(hour).padStart(2, "0")}:${String(minute).padStart(
+        2,
+        "0"
+      )}:${String(second).padStart(2, "0")}`;
+    };
+
+    const formatDate = (date) => {
+      if (!date) return null;
+      const { day, month, year } = date;
+      return `${String(day).padStart(2, "0")}/${String(month).padStart(
+        2,
+        "0"
+      )}/${year}`;
+    };
+
+    for (const train of trainDataArray) {
+      const { sensorStatusArr, DT } = train;
+
+      if (Array.isArray(sensorStatusArr)) {
+        const warnings = sensorStatusArr
+          .map((status, index) => (status === 0 ? index + 1 : null))
+          .filter(Boolean);
+
+        if (warnings.length > 0 && DT) {
+          const formattedDateTime = `${formatDate({
+            day: DT[1][0],
+            month: DT[1][1],
+            year: DT[1][2],
+          })} ${formatTime({
+            hour: DT[0][0],
+            minute: DT[0][1],
+            second: DT[0][2],
+          })}`;
+
+          for (const warning of warnings) {
+            const sensorId = await IssueCode.findOne({
+              componentName: warning,
+            }).select("_id");
+
+            const ticket = await DeviceTicket.findOne({
+              deviceId: device._id,
+              sensor: [sensorId],
+            });
+
+            let action;
+            if (ticket) {
+              if (ticket.isResolved) {
+                const resolvedDate = new Date(ticket.resolvedDate);
+                const options = { day: "2-digit", month: "short" };
+                const formattedDate = resolvedDate.toLocaleDateString(
+                  "en-GB",
+                  options
+                );
+                action = `Resolved on ${formattedDate}`;
+              } else {
+                action = "Ticket Raised";
+              }
+            } else {
+              action = "Raise Ticket";
+            }
+
+            const exists = alertResults.some(
+              (alert) =>
+                alert.warnings === warning
+            );
+
+            if (!exists) {
+              alertResults.push({
+                divisionName: device.division.divisionName,
+                lastResponseAt: formattedDateTime,
+                warnings: warning,
+                action: action,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    const paginatedAlerts = alertResults.slice(startIndex, startIndex + limit);
+    const totalCounts = alertResults.length;
+
+    return res.status(200).json({
+      deviceName,
+      alerts: paginatedAlerts,
+      totalCounts,
+      currentPage: page,
+      totalPages: Math.ceil(totalCounts / limit) || 1,
+    });
+  } catch (error) {
+    console.error("Error in getAlertData:", error);
     return res.status(500).json({ error: "Something went wrong" });
   }
 };
