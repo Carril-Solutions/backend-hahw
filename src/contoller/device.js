@@ -805,17 +805,19 @@ exports.getDeviceCounts = async (req, res) => {
     });
 
     const calculatePercentageChange = (current, previous) => {
-      console.log(current, previous);
-
-      if (previous === 0)
+      if (previous === 0) {
         return {
           percentage: current > 0 ? 100 : 0,
           direction: current >= 0 ? "up" : "down",
         };
-      const change = (current - previous) / previous;
+      }
+
+      const change = ((current - previous) / previous) * 100;
+      const direction = change >= 0 ? "up" : "down";
+
       return {
-        percentage: Math.abs(change.toFixed(2)),
-        direction: change >= 0 ? "up" : "down",
+        percentage: Number(Math.min(Math.abs(change), 100).toFixed(2)),
+        direction,
       };
     };
 
