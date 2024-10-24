@@ -145,7 +145,7 @@ exports.getIotData = async (req, res) => {
 
     const query = { key: deviceName };
     if (train) {
-      query.ID = Number(train);
+      query.ID = train;
     }
 
     const rawDatass = await DynamicModel.find(query);
