@@ -7,4 +7,7 @@ const { verifyJwtToken } = require("../middlewares/auth");
 router.get("/trainWarningsById", ctrl.getDTrainIdWarnings);
 router.get("/trainIddata", ctrl.getTrainData);
 
+//particulat train temperature
+router.get("/trainTempById", ctrl.getTrainTemp);
+
 module.exports = router;
