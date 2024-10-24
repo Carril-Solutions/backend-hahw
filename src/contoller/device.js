@@ -590,7 +590,6 @@ exports.getAllTrainData = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const startIndex = (page - 1) * limit;
-    const endIndex = page * limit;
 
     const devices = await Device.find()
       .populate({
@@ -625,71 +624,54 @@ exports.getAllTrainData = async (req, res) => {
       }
 
       const trainMap = {};
-      const warningResults = {};
 
       const formatTime = (time) => {
         if (!time) return null;
         const { hour, minute, second } = time;
-        return `${String(hour).padStart(2, "0")}:${String(minute).padStart(
-          2,
-          "0"
-        )}:${String(second).padStart(2, "0")}`;
+        return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")}`;
       };
 
       const formatDate = (date) => {
         if (!date) return null;
         const { day, month, year } = date;
-        return `${String(day).padStart(2, "0")}/${String(month).padStart(
-          2,
-          "0"
-        )}/${year}`;
+        return `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
       };
 
+      let lastValidDT = {};
+
       trainDataArray.forEach((train) => {
-        const { ID, temperature_arr, sensorStatusArr, SystemState, DT } = train;
+        const { ID, temperature_arr, SystemState, DT } = train;
 
-        const ambientTemperature =
-          Array.isArray(SystemState) && SystemState.length >= 5
-            ? SystemState[4]
-            : null;
-
-        const formattedDateTime = {
-          time: formatTime({
-            hour: DT?.[0]?.[0],
-            minute: DT?.[0]?.[1],
-            second: DT?.[0]?.[2],
-          }),
-          date: formatDate({
-            day: DT?.[1]?.[0],
-            month: DT?.[1]?.[1],
-            year: DT?.[1]?.[2],
-          }),
+        let formattedDateTime = {
+          time: null,
+          date: null,
         };
-
         let timestamp = null;
-        if (Array.isArray(DT) && DT.length > 1) {
-          const day = DT[1][0];
-          const month = DT[1][1] - 1;
-          const year = DT[1][2];
-          const hour = DT[0][0];
-          const minute = DT[0][1];
-          const second = DT[0][2];
 
-          if (
-            day !== undefined &&
-            month !== undefined &&
-            year !== undefined &&
-            hour !== undefined &&
-            minute !== undefined &&
-            second !== undefined
-          ) {
-            timestamp = new Date(year, month, day, hour, minute, second);
-          } else {
-            console.error(`Invalid DT components for train ID ${ID}:`, DT);
-          }
+        if (Array.isArray(DT) && DT.length >= 2 && DT[0].length >= 3 && DT[1].length >= 3) {
+          formattedDateTime = {
+            time: formatTime({
+              hour: DT?.[0]?.[0],
+              minute: DT?.[0]?.[1],
+              second: DT?.[0]?.[2],
+            }),
+            date: formatDate({
+              day: DT?.[1]?.[0],
+              month: DT?.[1]?.[1],
+              year: DT?.[1]?.[2],
+            }),
+          };
+
+          const [day, month, year] = [DT[1][0], DT[1][1] - 1, DT[1][2]];
+          const [hour, minute, second] = [DT[0][0], DT[0][1], DT[0][2]];
+          timestamp = new Date(year, month, day, hour, minute, second);
+
+          lastValidDT[ID] = { formattedDateTime, timestamp };
         } else {
-          console.error(`DT is not valid for train ID ${ID}:`, DT);
+          console.warn(`Skipping DT for train ID ${ID} due to invalid DT:`, DT);
         }
+
+        const ambientTemperature = Array.isArray(SystemState) && SystemState.length >= 5 ? SystemState[4] : null;
 
         let maxRightTemp = null;
         let maxLeftTemp = null;
@@ -701,16 +683,13 @@ exports.getAllTrainData = async (req, res) => {
           const leftMax = Math.max(...leftAxleTemps);
           const rightMax = Math.max(...rightAxleTemps);
 
-          maxLeftTemp =
-            maxLeftTemp !== null ? Math.max(maxLeftTemp, leftMax) : leftMax;
-          maxRightTemp =
-            maxRightTemp !== null ? Math.max(maxRightTemp, rightMax) : rightMax;
+          maxLeftTemp = maxLeftTemp !== null ? Math.max(maxLeftTemp, leftMax) : leftMax;
+          maxRightTemp = maxRightTemp !== null ? Math.max(maxRightTemp, rightMax) : rightMax;
         });
 
-        const temperatureDifference =
-          maxRightTemp !== null && maxLeftTemp !== null
-            ? Math.abs(maxRightTemp - maxLeftTemp)
-            : null;
+        const temperatureDifference = maxRightTemp !== null && maxLeftTemp !== null
+          ? Math.abs(maxRightTemp - maxLeftTemp)
+          : null;
 
         if (!trainMap[ID]) {
           const totalAxles = temperature_arr.length;
@@ -736,6 +715,13 @@ exports.getAllTrainData = async (req, res) => {
         }
       });
 
+      Object.keys(trainMap).forEach((trainID) => {
+        if (lastValidDT[trainID]) {
+          trainMap[trainID].formattedDateTime = lastValidDT[trainID].formattedDateTime;
+          trainMap[trainID].timestamp = lastValidDT[trainID].timestamp;
+        }
+      });
+
       const trainDetails = Object.values(trainMap).map((train) => ({
         trainID: train.trainID,
         axle: train.axle,
@@ -753,15 +739,10 @@ exports.getAllTrainData = async (req, res) => {
       allTrainData.push(...trainDetails);
     }
 
-    allTrainData.sort((a, b) => {
-      return a.timestamp - b.timestamp;
-    });
+    allTrainData.sort((a, b) => a.timestamp - b.timestamp);
 
     const totalCounts = allTrainData.length;
-    const paginatedTrains =
-      limit > 0
-        ? allTrainData.slice(startIndex, startIndex + limit)
-        : allTrainData;
+    const paginatedTrains = limit > 0 ? allTrainData.slice(startIndex, startIndex + limit) : allTrainData;
 
     return res.status(200).json({
       trains: paginatedTrains,
