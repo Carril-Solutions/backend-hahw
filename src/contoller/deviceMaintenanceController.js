@@ -219,14 +219,26 @@ exports.deleteDeviceMaintenance = async (req, res) => {
 
 exports.getMaintenanceRecords = async (req, res) => {
   try {
+    const { deviceName } = req.query;
+
+    let deviceIdFilter = {};
+    if (deviceName) {
+      const device = await Device.findOne({ deviceName });
+      if (!device) {
+        return res.status(404).json({ message: "Device not found." });
+      }
+      deviceIdFilter = { deviceId: device._id };
+    }
+
     const upcomingMaintenanceRecords = await DeviceMaintenance.find({
       status: "Upcoming Maintenance",
+      ...deviceIdFilter,
     })
       .populate({
         path: "deviceId",
         select: "deviceName",
         populate: {
-          path: "location", 
+          path: "location",
           select: "locationName",
         },
       })
@@ -235,12 +247,13 @@ exports.getMaintenanceRecords = async (req, res) => {
 
     const maintenanceDoneRecords = await DeviceMaintenance.find({
       status: "Maintenance Done",
+      ...deviceIdFilter,
     })
       .populate({
         path: "deviceId",
         select: "deviceName",
         populate: {
-          path: "location", 
+          path: "location",
           select: "locationName",
         },
       })
@@ -249,50 +262,51 @@ exports.getMaintenanceRecords = async (req, res) => {
 
     const dueDateRecords = await DeviceMaintenance.find({
       maintainDate: { $lt: new Date() },
+      ...deviceIdFilter,
     })
       .populate({
         path: "deviceId",
         select: "deviceName",
         populate: {
-          path: "location", 
+          path: "location",
           select: "locationName",
         },
       })
       .sort({ maintainDate: 1 })
       .limit(5);
 
-      const transformRecords = (records) => {
-        return records.map(record => ({
-            _id: record._id,
-            status: record.status,
-            maintainDate: record.maintainDate,
-            engineerName: record.engineerName,
-            contactNumber: record.contactNumber,
-            engineerEmail: record.engineerEmail,
-            createdAt: record.createdAt,
-            updatedAt: record.updatedAt,
-            deviceName: record.deviceId.deviceName, 
-            locationName: record.deviceId.location.locationName 
-        }));
+    const transformRecords = (records) => {
+      return records.map(record => ({
+        _id: record._id,
+        status: record.status,
+        maintainDate: record.maintainDate,
+        engineerName: record.engineerName,
+        contactNumber: record.contactNumber,
+        engineerEmail: record.engineerEmail,
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
+        deviceName: record.deviceId.deviceName,
+        locationName: record.deviceId.location.locationName,
+      }));
     };
 
     const responseData = {
-        upcomingMaintenance: transformRecords(upcomingMaintenanceRecords),
-        maintenanceDone: transformRecords(maintenanceDoneRecords),
-        dueDate: transformRecords(dueDateRecords),
+      upcomingMaintenance: transformRecords(upcomingMaintenanceRecords),
+      maintenanceDone: transformRecords(maintenanceDoneRecords),
+      dueDate: transformRecords(dueDateRecords),
     };
 
     if (
-        !upcomingMaintenanceRecords.length &&
-        !maintenanceDoneRecords.length &&
-        !dueDateRecords.length
+      !upcomingMaintenanceRecords.length &&
+      !maintenanceDoneRecords.length &&
+      !dueDateRecords.length
     ) {
-        return res.status(404).json({ message: "No maintenance records found." });
+      return res.status(404).json({ message: "No maintenance records found." });
     }
 
     return res.status(200).json({
-        message: "Maintenance records retrieved successfully.",
-        data: responseData,
+      message: "Maintenance records retrieved successfully.",
+      data: responseData,
     });
   } catch (error) {
     console.error("Error retrieving maintenance records:", error);
