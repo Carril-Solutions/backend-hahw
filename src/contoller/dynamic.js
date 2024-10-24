@@ -185,13 +185,16 @@ exports.getIotData = async (req, res) => {
       }
       return acc;
     }, []);
-
+    
     const finalResponse = {
       id: rawDatass[0]._id,
       key: rawDatass[0].key,
       timestamp: rawDatass[0].createdAt,
       temperatureData: mergedTemperatureData,
-      sensorStatus: rawDatass.map((item) => item.sensorStatusArr).flat(),
+      sensorStatus: rawDatass
+        .map((item) => item.sensorStatusArr)
+        .flat()
+        .filter((status) => status !== undefined),
       systemState,
       datetime: {
         time: time || "null:null:null",
