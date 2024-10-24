@@ -268,8 +268,8 @@ exports.getTrainData = async (req, res) => {
 
 exports.getDTrainIdWarnings = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.query.page);
+    const limit = parseInt(req.query.limit);
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
     const trainName = req.query.trainName;
@@ -302,7 +302,7 @@ exports.getDTrainIdWarnings = async (req, res) => {
         calculatedStartDate = new Date(startDate);
         calculatedEndDate = new Date(endDate);
         calculatedEndDate.setHours(23, 59, 59, 999);
-        
+
         if (
           isNaN(calculatedStartDate.getTime()) ||
           isNaN(calculatedEndDate.getTime())
@@ -353,7 +353,7 @@ exports.getDTrainIdWarnings = async (req, res) => {
 
     for (const device of devices) {
       const warnings = await DynamicModel.find({
-        ID: trainName, 
+        ID: trainName,
         ...dateFilter,
       });
 
@@ -559,5 +559,82 @@ exports.getDTrainIdWarnings = async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server error", error });
+  }
+};
+
+exports.getTrainTemp = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page);
+    const limit = parseInt(req.query.limit);
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const trainName = req.query.trainName;
+    if (!trainName) {
+      return res.status(400).json({ error: "trainName is required" });
+    }
+    const dynamicDataList = await DynamicModel.find({ ID: trainName });
+    if (!dynamicDataList || dynamicDataList.length === 0) {
+      return res.status(404).json({ message: "Train not found" });
+    }
+
+    let combinedTemperatureArr = [];
+    dynamicDataList.forEach((dynamicData) => {
+      combinedTemperatureArr = combinedTemperatureArr.concat(
+        dynamicData.temperature_arr
+      );
+    });
+
+    const totalCount = combinedTemperatureArr.length;
+
+    if (page && limit) {
+      const startIndex = (page - 1) * limit;
+      combinedTemperatureArr = combinedTemperatureArr.slice(
+        startIndex,
+        startIndex + limit
+      );
+    }
+
+    let axlesData = {};
+
+    combinedTemperatureArr.forEach((tempData, index) => {
+      const axleNumber = `Axle ${index + 1}`;
+
+      const leftAxleBoxes = tempData.slice(1, 5).sort((a, b) => b - a);
+      const rightAxleBoxes = tempData.slice(10, 14).sort((a, b) => b - a);
+      const leftWheelBoxes = tempData.slice(5, 7).sort((a, b) => b - a);
+      const rightWheelBoxes = tempData.slice(14, 16).sort((a, b) => b - a);
+      const leftBrakeBoxes = tempData.slice(7, 9).sort((a, b) => b - a);
+      const rightBrakeBoxes = tempData.slice(16, 18).sort((a, b) => b - a);
+
+      const axleBoxDifference = leftAxleBoxes[0] - rightAxleBoxes[0];
+      const wheelBoxDifference = leftWheelBoxes[0] - rightWheelBoxes[0];
+      const brakeBoxDifference = leftBrakeBoxes[0] - rightBrakeBoxes[0];
+
+      axlesData[axleNumber] = {
+        leftAxleBoxes,
+        rightAxleBoxes,
+        leftWheelBoxes,
+        rightWheelBoxes,
+        leftBrakeBoxes,
+        rightBrakeBoxes,
+        differences: {
+          axleBoxDifference,
+          wheelBoxDifference,
+          brakeBoxDifference,
+        },
+      };
+    });
+
+    const results = {
+      totalCount: totalCount,
+      currentPage: page,
+      totalPages: Math.ceil(totalCount / limit) || 1,
+      axlesData: axlesData,
+    };
+
+    return res.status(200).json(results);
+  } catch (error) {
+    console.log({ error });
+    return res.status(500).send({ error: "Something broke" });
   }
 };
