@@ -6,13 +6,13 @@ exports.createDeviceTicket = async (req, res) => {
         if (req.user.role !== "admin") {
             return res.status(403).send({ error: "Unauthorized to create" });
         }
-        const { deviceId, remark, sensor, location } = req.body;
+        const { deviceId, remark, defectedSensor, location } = req.body;
 
-        if (!deviceId || !sensor || !location || !remark) {
+        if (!deviceId || !defectedSensor || !location || !remark) {
             return validateFields(res);
         }
 
-        const data = { deviceId, remark, sensor, location };
+        const data = { deviceId, remark, defectedSensor, location };
         const ticketRecord = await DeviceTicket.create(data);
 
         return res.status(201).send({ data: ticketRecord, message: "Device ticket created successfully" });
@@ -73,7 +73,12 @@ exports.getAllDeviceTickets = async (req, res) => {
                 select: "_id locationName",
             })
             .populate({
-                path: "sensor",
+                path: "defectedSensor",
+                model: "issuecode",
+                select: "_id componentName",
+            })
+            .populate({
+                path: "replacedSensor",
                 model: "issuecode",
                 select: "_id componentName",
             });
@@ -112,13 +117,14 @@ exports.updateDeviceTicket = async (req, res) => {
             return validateFound(res);
         }
 
-        const { status, remark, engineerName, engineerEmail, contactNumber, sensor, location } = req.body;
+        const { status, remark, engineerName, engineerEmail, contactNumber, defectedSensor, replacedSensor, location } = req.body;
         if (status) ticketRecord.status = status;
         if (remark) ticketRecord.remark = remark;
         if (engineerName) ticketRecord.engineerName = engineerName;
         if (engineerEmail) ticketRecord.engineerEmail = engineerEmail;
         if (contactNumber) ticketRecord.contactNumber = contactNumber;
-        if (sensor) ticketRecord.sensor = sensor;
+        if (defectedSensor) ticketRecord.defectedSensor = defectedSensor;
+        if (replacedSensor) ticketRecord.replacedSensor = replacedSensor;
         if (location) ticketRecord.location = location;
         ticketRecord.isResolved = true;
         ticketRecord.resolvedDate = new Date();
@@ -227,7 +233,12 @@ exports.getLatestDeviceTicket = async (req, res) => {
                 select: "_id locationName",
             })
             .populate({
-                path: "sensor",
+                path: "defectedSensor",
+                model: "issuecode",
+                select: "_id componentName",
+            })
+            .populate({
+                path: "replacedSensor",
                 model: "issuecode",
                 select: "_id componentName",
             })

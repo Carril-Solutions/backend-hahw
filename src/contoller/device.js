@@ -1013,12 +1013,14 @@ exports.getAlertData = async (req, res) => {
             const formattedDateTime = `${formatDate({ day: DT[1][0], month: DT[1][1], year: DT[1][2] })} ${formatTime({ hour: DT[0][0], minute: DT[0][1], second: DT[0][2] })}`;
 
             for (const warning of warnings) {
-              const sensorId = await IssueCode.findOne({ componentName: warning }).select("_id");
 
-              const ticket = await DeviceTicket.findOne({ deviceId: device._id, sensor: [sensorId] });
+              const sensorId = await IssueCode.findOne({ componentName: warning }).select("_id");
+              
+              const ticket = await DeviceTicket.findOne({ deviceId: device._id, defectedSensor: [sensorId] });
 
               let action;
               if (ticket) {
+                
                 if (ticket.isResolved) {
                   const resolvedDate = new Date(ticket.resolvedDate);
                   const options = { day: "2-digit", month: "short" };

@@ -11,8 +11,12 @@ const deviceTicketSchema = new Schema({
             message: props => `${props.value} is not a valid ObjectId!`
         }
     },
-    sensor: {
+    defectedSensor: {
         type: [mongoose.Schema.Types.ObjectId],
+    },
+    replacedSensor: {
+        type: [mongoose.Schema.Types.ObjectId],
+        default: []
     },
     location: {
         type: mongoose.Schema.Types.ObjectId,
