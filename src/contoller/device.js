@@ -1041,7 +1041,8 @@ exports.getAlertData = async (req, res) => {
                   lastResponseAt: formattedDateTime,
                   warnings: warning,
                   action: action,
-                  sensorId: sensorId.id
+                  sensorId: sensorId.id,
+                  deviceId: device.id
                 });
               }
             }
