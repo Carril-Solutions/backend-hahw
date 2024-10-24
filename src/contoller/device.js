@@ -254,7 +254,8 @@ exports.getDevice = async (req, res) => {
           path: "location",
           model: "location",
           select: "_id locationName",
-        });
+        })
+        .sort({ createdAt: -1 })
     } else {
       const startIndex = (page - 1) * limit;
       const endIndex = page * limit;
