@@ -816,7 +816,7 @@ exports.getDeviceCounts = async (req, res) => {
       const direction = change >= 0 ? "up" : "down";
 
       return {
-        percentage: Number(Math.min(Math.abs(change), 100).toFixed(2)),
+        percentage: Number(Math.min(Math.abs(change), 100).toFixed(0)),
         direction,
       };
     };
