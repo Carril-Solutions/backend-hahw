@@ -3,13 +3,13 @@ const router = express.Router();
 const ctrl = require("../contoller/deviceTicketController");
 const { verifyJwtToken } = require("../middlewares/auth");
 
-router.post("/addDeviceTicket", ctrl.createDeviceTicket);
-router.get("/deviceTickets", ctrl.getAllDeviceTickets);
-router.put("/updateDeviceTicket/:ticketId", ctrl.updateDeviceTicket);
-router.patch("/updateDeviceTicketStatus/:ticketId", ctrl.updateDeviceTicketStatus);
-router.delete("/deleteDeviceTicket/:ticketId", ctrl.deleteDeviceTicket);
+router.post("/addDeviceTicket", verifyJwtToken, ctrl.createDeviceTicket);
+router.get("/deviceTickets", verifyJwtToken, ctrl.getAllDeviceTickets);
+router.put("/updateDeviceTicket/:ticketId", verifyJwtToken, ctrl.updateDeviceTicket);
+router.patch("/updateDeviceTicketStatus/:ticketId", verifyJwtToken, ctrl.updateDeviceTicketStatus);
+router.delete("/deleteDeviceTicket/:ticketId", verifyJwtToken, ctrl.deleteDeviceTicket);
 
-router.get('/device-tickets-alert', ctrl.getLatestDeviceTicket);
+router.get('/device-tickets-alert', verifyJwtToken, ctrl.getLatestDeviceTicket);
 
 
 module.exports = router;
